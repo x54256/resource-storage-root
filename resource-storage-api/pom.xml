@@ -22,16 +22,6 @@
             <groupId>cn.x5456</groupId>
             <artifactId>infrastructure</artifactId>
         </dependency>
-
-        <!-- 第三方依赖-->
-        <dependency>
-            <groupId>org.springframework</groupId>
-            <artifactId>spring-context</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>io.projectreactor</groupId>
-            <artifactId>reactor-core</artifactId>
-        </dependency>
     </dependencies>
 
 </project>

@@ -4,7 +4,6 @@ import cn.hutool.core.lang.Pair;
 import cn.x5456.rs.entity.ResourceInfo;
 
 import java.io.InputStream;
-import java.io.OutputStream;
 
 /**
  * @author yujx
@@ -20,7 +19,7 @@ public interface IBlockResourceStorage {
 
     Boolean downloadFile(String localFilePath, String path);
 
-    Pair<String, OutputStream> downloadFile(String path);
+    Pair<String, String> downloadFile(String path);
 
     Boolean deleteFile(String path);
 

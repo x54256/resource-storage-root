@@ -2,19 +2,18 @@ package cn.x5456.rs.def.block;
 
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.lang.Pair;
-import cn.hutool.core.util.IdUtil;
 import cn.x5456.rs.def.BigFileUploader;
 import cn.x5456.rs.def.IResourceStorage;
 import cn.x5456.rs.def.UploadProgress;
 import cn.x5456.rs.entity.ResourceInfo;
-import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.core.io.buffer.DataBufferFactory;
 import org.springframework.core.io.buffer.DataBufferUtils;
 import org.springframework.core.io.buffer.DefaultDataBufferFactory;
 import reactor.core.publisher.Flux;
 
-import java.io.*;
+import java.io.File;
+import java.io.InputStream;
 import java.util.List;
 
 import static cn.x5456.rs.constant.DataBufferConstant.DEFAULT_CHUNK_SIZE;
@@ -93,7 +92,6 @@ public class ResourceStorageBlockWrapper implements IBlockResourceStorage {
      * @param path          服务上存储的标识
      * @return 是否下载成功
      */
-    @CanIgnoreReturnValue
     public Boolean downloadFile(String localFilePath, String path) {
         return resourceStorage.downloadFile(localFilePath, path).block();
     }
@@ -102,19 +100,10 @@ public class ResourceStorageBlockWrapper implements IBlockResourceStorage {
      * 从文件服务中获取文件
      *
      * @param path 服务上存储的标识
-     * @return Pair key-文件名，value-输出流
+     * @return Pair key-文件名，value-本地缓存路径
      */
-    public Pair<String, OutputStream> downloadFile(String path) {
-        String fileName = this.getFileName(path);
-        String localFilePath = LOCAL_TEMP_PATH + IdUtil.simpleUUID() + File.separator + fileName;
-        // 下载文件
-        this.downloadFile(localFilePath, path);
-        try {
-            return new Pair<>(fileName, new FileOutputStream(localFilePath));
-        } catch (FileNotFoundException e) {
-            // 不可能发生
-            throw new RuntimeException(e);
-        }
+    public Pair<String, String> downloadFile(String path) {
+        return resourceStorage.downloadFile(path).block();
     }
 
     /**

@@ -516,6 +516,23 @@ public class MongoResourceStorage implements IResourceStorage {
     }
 
     /**
+     * 从文件服务中获取文件
+     *
+     * @param path 服务上存储的标识
+     * @return Pair key-文件名，value-文件在本地的缓存路径
+     */
+    @Override
+    public Mono<Pair<String, String>> downloadFile(String path) {
+        return this.getResourceInfo(path)
+                .switchIfEmpty(Mono.error(new RuntimeException(StrUtil.format("输入的 path：「{}」不正确！", path))))
+                .flatMap(r -> {
+                    String fileHash = r.getFileHash();
+                    String fileName = r.getFileName();
+                    return this.download(fileHash).map(localFilePath -> new Pair<>(fileName, localFilePath));
+                });
+    }
+
+    /**
      * 删除文件服务上的文件
      * todo（引用计数）
      *
