@@ -1,0 +1,3 @@
+# Auto Configure
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
+cn.x5456.rs.autoconfigure.RsMongoAutoConfiguration

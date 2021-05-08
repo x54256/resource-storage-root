@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <packaging>pom</packaging>
+    <modules>
+        <module>resource-storage-core</module>
+        <module>infrastructure</module>
+        <module>resource-storage-wrapper</module>
+        <module>resource-storage-starter</module>
+        <module>resource-storage-api</module>
+        <module>resource-storage-impl</module>
+    </modules>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>2.2.6.RELEASE</version>
+        <relativePath/>
+    </parent>
+    <groupId>cn.x5456</groupId>
+    <artifactId>resource-storage-root</artifactId>
+    <version>1.0-SNAPSHOT</version>
+
+    <properties>
+        <maven.compiler.source>8</maven.compiler.source>
+        <maven.compiler.target>8</maven.compiler.target>
+        <xdata.version>1.2.1-SNAPSHOT</xdata.version>
+        <spring-cloud.version>Hoxton.SR8</spring-cloud.version>
+        <hutool.version>5.5.2</hutool.version>
+        <jetbrains.annotations.version>1.7.0</jetbrains.annotations.version>
+        <swagger.version>3.0.0</swagger.version>
+        <swagger.annotations.version>1.5.20</swagger.annotations.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- 项目内依赖-->
+            <dependency>
+                <groupId>cn.x5456</groupId>
+                <artifactId>infrastructure</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>cn.x5456</groupId>
+                <artifactId>resource-storage-api</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>cn.x5456</groupId>
+                <artifactId>mongo</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+
+            <!-- 公司依赖-->
+<!--            <dependency>-->
+<!--                <groupId>com.dist.xdata.starter</groupId>-->
+<!--                <artifactId>xdata-reactive-core</artifactId>-->
+<!--                <version>${xdata.version}</version>-->
+<!--            </dependency>-->
+
+            <!-- 第三方依赖-->
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-dependencies</artifactId>
+                <version>${spring-cloud.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>cn.hutool</groupId>
+                <artifactId>hutool-all</artifactId>
+                <version>${hutool.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.realityforge.org.jetbrains.annotations</groupId>
+                <artifactId>org.jetbrains.annotations</artifactId>
+                <version>${jetbrains.annotations.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.springfox</groupId>
+                <artifactId>springfox-boot-starter</artifactId>
+                <version>${swagger.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.swagger</groupId>
+                <artifactId>swagger-annotations</artifactId>
+                <version>${swagger.annotations.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+</project>
