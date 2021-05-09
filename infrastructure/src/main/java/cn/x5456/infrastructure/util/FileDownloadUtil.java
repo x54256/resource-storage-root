@@ -16,7 +16,7 @@ public class FileDownloadUtil {
     }
 
     public static String createContentRange(HttpRange httpRange, long length) {
-        return "bytes" + httpRange.getRangeEnd(length) + "-" + httpRange.getRangeEnd(length) + "/" + length;
+        return "bytes" + httpRange.getRangeStart(length) + "-" + httpRange.getRangeEnd(length) + "/" + length;
     }
 
 }
