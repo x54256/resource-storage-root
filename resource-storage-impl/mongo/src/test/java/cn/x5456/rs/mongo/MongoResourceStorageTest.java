@@ -28,6 +28,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.scheduler.Scheduler;
 
 import java.io.File;
+import java.nio.file.Paths;
 import java.util.concurrent.CountDownLatch;
 
 import static cn.x5456.rs.constant.DataBufferConstant.DEFAULT_CHUNK_SIZE;
@@ -207,5 +208,19 @@ public class MongoResourceStorageTest {
         Assert.assertTrue(bigFileUploader.uploadError(hash).block());
     }
 
+    @Test
+    public void test() {
+        mongoResourceStorage.cleanLocalTemp();
+        this.uploadCompleted();
+        mongoResourceStorage.cleanLocalTemp();
+        mongoResourceStorage.downloadFile(pathBig).block();
+    }
 
+    @Test
+    public void testTransferTo() {
+        mongoResourceStorage.cleanLocalTemp();
+        this.uploadCompleted();
+//        mongoResourceStorage.cleanLocalTemp();
+        bigFileUploader.transferTo(hash, Paths.get("123")).block();
+    }
 }

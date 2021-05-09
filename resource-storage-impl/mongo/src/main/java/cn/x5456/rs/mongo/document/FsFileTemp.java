@@ -36,7 +36,7 @@ public class FsFileTemp {
     private Integer chunk;
 
     // 对应的 fs.files 表的 id
-    private String fsFilesId;
+    private String filesId;
 
     // 当前片的大小
     private Long chunkSize;

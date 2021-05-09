@@ -6,6 +6,8 @@ import org.springframework.core.io.buffer.DataBuffer;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.nio.file.Path;
+
 public interface BigFileUploader {
 
     /**
@@ -64,6 +66,14 @@ public interface BigFileUploader {
      * @return 操作是否成功
      */
     Mono<Boolean> uploadError(String fileHash);
+
+    /**
+     * 持久化到指定路径
+     *
+     * @param fileHash 文件 hash
+     * @param dest     目标路径
+     */
+    Mono<Void> transferTo(String fileHash, Path dest);
 
     /*
     0. 构造的时候加一个属性，是否需要本地合并该文件

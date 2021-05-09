@@ -56,6 +56,7 @@ import java.util.Objects;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
 import static cn.x5456.rs.constant.DataBufferConstant.DEFAULT_CHUNK_SIZE;
@@ -359,10 +360,7 @@ public class MongoResourceStorage implements IResourceStorage {
                             // 有一个机制就是请求线程与接收线程绑定，即第一个请求用 N2-2 接收，第二个请求用 N2-3 接收，因为我们 for 循环之后
                             // 调用了 latch.await(); 将 N2-2 阻塞住了，所以当消息来了之后 N2-2 无法接收，所以程序一直无法停止。
                             // 所以，我们不能让 nio 线程阻塞，那就需要在调用时重新创建一个线程了。
-                            scheduler.schedule(() -> this.doDownload(m).subscribe(localTempPath -> {
-                                cache.put(localTempPath, m);
-                                sink.success(localTempPath);
-                            }));
+                            this.doDownload(m).subscribe(sink::success);
                         }
                     });
         });
@@ -394,62 +392,74 @@ public class MongoResourceStorage implements IResourceStorage {
 
     @NotNull
     private Mono<String> doDownload(FsFileMetadata metadata) {
+
+        String fileTempPath = this.getFileTempPath(metadata.getFileHash());
+        String officialPath = this.getFileOfficialPath(metadata.getFileHash());
+
+        // TODO: 2021/5/9 暂时注释掉，感觉用文件锁好一点
+//        /*
+//         0. 如果 tmp 文件存在
+//         1. 检测 hashcode.tmp 是否被删除
+//         2. 如果被删除则检查 hashcode.official 是否被创建出来了
+//         3. 如果没有，则继续下载
+//
+//         虽然我觉得这样写不好，但也想不出别的办法，暂时先这样吧
+//         */
+//            log.info("正在下载文件到：「{}」", fileTempPath);
+//            if (FileUtil.exist(fileTempPath)) {
+//                int randomInt = RandomUtil.randomInt(100, 4000);
+//                while (true) {
+//                    if (!FileUtil.exist(fileTempPath)) {
+//
+//                        if (FileUtil.exist(officialPath)) {
+//                            sink.success(officialPath);
+//                            return;
+//                        } else {
+//                            break;
+//                        }
+//                    }
+//
+//                    try {
+//                        TimeUnit.MILLISECONDS.sleep(randomInt);
+//                    } catch (InterruptedException e) {
+//                        e.printStackTrace();
+//                    }
+//                }
+//            }
+
+        return this.merge(metadata, fileTempPath, officialPath,
+                (randomAccessFile, filesInfo) -> this.doDownloadChunk(filesInfo, randomAccessFile).then())
+                // 将线程从 nio 线程切换到 scheduler
+                .subscribeOn(scheduler);
+    }
+
+    @NotNull
+    private String getFileTempPath(String fileHash) {
+        return LOCAL_TEMP_PATH + fileHash + TMP_SUFFIX;
+    }
+
+    /**
+     * 注：调用这个方法不能使用 nio 线程
+     */
+    @NotNull
+    private Mono<String> merge(FsFileMetadata metadata, String tempPath, String officialPath,
+                               BiFunction<RandomAccessFile, FsFileMetadata.FsFilesInfo, Mono<Void>> function) {
         return Mono.create(sink -> {
-
-            /*
-            0. 如果 tmp 文件存在
-            1. 检测 hashcode.tmp 是否被删除
-            2. 如果被删除则检查 hashcode.official 是否被创建出来了
-            3. 如果没有，则继续下载
-
-            虽然我觉得这样写不好，但也想不出别的办法，暂时先这样吧
-             */
-            String fileTempPath = this.getFileTempPath(metadata.getFileHash());
-            log.info("正在下载文件到：「{}」", fileTempPath);
-            if (FileUtil.exist(fileTempPath)) {
-                int randomInt = RandomUtil.randomInt(100, 4000);
-
-                while (true) {
-                    if (!FileUtil.exist(fileTempPath)) {
-                        String officialPath = this.getFileOfficialPath(metadata.getFileHash());
-                        if (FileUtil.exist(officialPath)) {
-                            sink.success(officialPath);
-                            return;
-                        } else {
-                            break;
-                        }
-                    }
-
-                    try {
-                        TimeUnit.MILLISECONDS.sleep(randomInt);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-
-
             // 获取每一片的信息，排序
             List<FsFileMetadata.FsFilesInfo> fsFilesInfoList = metadata.getFilesInfoList();
             fsFilesInfoList.sort(Comparator.comparingInt(FsFileMetadata.FsFilesInfo::getChunk));
 
-            String tempPath = this.getFileTempPath(metadata.getFileHash());
             long index = 0;
             CountDownLatch latch = new CountDownLatch(fsFilesInfoList.size());
             AtomicBoolean isSuccess = new AtomicBoolean(true);
             try {
+                // 下载每一片文件到 tempPath
                 for (FsFileMetadata.FsFilesInfo fsFilesInfo : fsFilesInfoList) {
                     RandomAccessFile randomAccessFile = new RandomAccessFile(tempPath, "rw");
                     randomAccessFile.seek(index);
                     index += fsFilesInfo.getChunkSize();
 
-                    // 开始下载
-                    gridFsTemplate.findOne(Query.query(Criteria.where("_id").is(fsFilesInfo.getFilesId())))
-                            .log()
-                            .flatMap(gridFsTemplate::getResource)
-                            .map(ReactiveGridFsResource::getDownloadStream)
-                            .flux()
-                            .flatMap(dataBufferFlux -> DataBufferUtils.write(dataBufferFlux, randomAccessFile.getChannel()))
+                    function.apply(randomAccessFile, fsFilesInfo)
                             .onErrorResume(ex -> {
                                 isSuccess.set(false);
                                 sink.error(ex);
@@ -463,18 +473,21 @@ public class MongoResourceStorage implements IResourceStorage {
                                 } finally {
                                     latch.countDown();
                                 }
-                            }).subscribe();
+                            })
+                            .subscribe();
                 }
 
-                // 注释掉，在调用方加个 sleep 就可以看到正常接收了 onNext()
+                // 阻塞住，等待全部线程下载完成
+                log.info("latch：「{}」", latch);
                 latch.await();
 
                 if (isSuccess.get()) {
                     // 文件更名（"转正"）
-                    File officialFile = FileUtil.rename(
-                            new File(tempPath), metadata.getFileHash() + OFFICIAL_SUFFIX, true);
-                    log.info("文件「{}」下载完成！", officialFile);
-                    sink.success(officialFile.getPath());
+                    FileUtil.move(Paths.get(tempPath), Paths.get(officialPath), true);
+                    log.info("文件「{}」下载完成！", officialPath);
+                    // 写入 LCU 缓存
+                    cache.put(officialPath, metadata);
+                    sink.success(officialPath);
                 } else {
                     // 下载失败，删除缓存文件
                     FileUtil.del(tempPath);
@@ -485,8 +498,14 @@ public class MongoResourceStorage implements IResourceStorage {
         });
     }
 
-    private String getFileTempPath(String fileHash) {
-        return LOCAL_TEMP_PATH + fileHash + TMP_SUFFIX;
+    @NotNull
+    private Flux<DataBuffer> doDownloadChunk(FsFileMetadata.FsFilesInfo fsFilesInfo, RandomAccessFile randomAccessFile) {
+        return gridFsTemplate.findOne(Query.query(Criteria.where("_id").is(fsFilesInfo.getFilesId())))
+                .flatMap(gridFsTemplate::getResource)
+                .map(ReactiveGridFsResource::getDownloadStream)
+                .flux()
+                .log()
+                .flatMap(dataBufferFlux -> DataBufferUtils.write(dataBufferFlux, randomAccessFile.getChannel()));
     }
 
     /**
@@ -610,6 +629,16 @@ public class MongoResourceStorage implements IResourceStorage {
          */
         @Override
         public Mono<Boolean> uploadFileChunk(String fileHash, int chunk, Flux<DataBuffer> dataBufferFlux) {
+            // 拼接本地缓存路径
+            String endurancePath = LOCAL_TEMP_PATH + fileHash + File.separator + chunk + ENDURANCE_SUFFIX;
+            FileUtil.touch(endurancePath);
+            return DataBufferUtils.write(dataBufferFlux, Paths.get(endurancePath), StandardOpenOption.CREATE, StandardOpenOption.WRITE)
+                    .then(this.doUploadFileChunk(fileHash, chunk, dataBufferFlux));
+        }
+
+        @NotNull
+        private Mono<Boolean> doUploadFileChunk(String fileHash, int chunk, Flux<DataBuffer> dataBufferFlux) {
+
             /*
             1. 检查文件 hash 是否存在
             2. 如果不存在，则在 fs.metadata 表创建一个
@@ -620,8 +649,6 @@ public class MongoResourceStorage implements IResourceStorage {
             6. 如果创建失败，则证明已经有了一个线程抢先上传了，返回 false
              */
 
-            // TODO: 2021/5/9 本地缓存，现在是错的，执行不通过的
-
             return MongoResourceStorage.this.getFileMetadata(fileHash)
                     .switchIfEmpty(this.createOrGet(fileHash))
                     .flatMap(metadata -> this.insertChunkTempInfoV2(fileHash, chunk))
@@ -631,7 +658,7 @@ public class MongoResourceStorage implements IResourceStorage {
                                 mongoTemplate.remove(temp).subscribe();
                             })
                             .flatMap(objectId -> {
-                                temp.setFsFilesId(objectId.toHexString());
+                                temp.setFilesId(objectId.toHexString());
                                 temp.setUploadProgress(UploadProgress.UPLOAD_COMPLETED);
                                 temp.setChunkSize(MongoResourceStorage.this.getChunkSize(dataBufferFlux));
                                 return mongoTemplate.save(temp);
@@ -805,6 +832,62 @@ public class MongoResourceStorage implements IResourceStorage {
                     .flatMap(mongoTemplate::remove)
                     .collectList()
                     .map(deleteResults -> true);
+        }
+
+        /**
+         * 持久化到指定路径
+         *
+         * @param fileHash 文件 hash
+         * @param dest     目标路径
+         */
+        @Override
+        public Mono<Void> transferTo(String fileHash, Path dest) {
+
+            // 拼接碎片缓存文件夹，如果不存在则创建
+            String enduranceDir = LOCAL_TEMP_PATH + fileHash + File.separator;
+            if (!FileUtil.exist(enduranceDir)) {
+                FileUtil.mkdir(enduranceDir);
+            }
+
+            // 拼接整个文件的缓存路径
+            String tempPath = enduranceDir + fileHash + TMP_SUFFIX;
+            // 获取正式路径
+            String officialPath = MongoResourceStorage.this.getFileOfficialPath(fileHash);
+
+
+            return MongoResourceStorage.this.getReadyMetadata(fileHash)
+                    .publishOn(scheduler)   // 从 nio 线程切换到 scheduler 线程
+                    .flatMap(metadata -> MongoResourceStorage.this.merge(metadata, tempPath, officialPath,
+                            ((randomAccessFile, filesInfo) -> {
+                                // 拼接当前碎片的本地缓存路径
+                                String endurancePath = enduranceDir + filesInfo.getChunk() + ENDURANCE_SUFFIX;
+                                // 如果本地已经存在了则直接从本地获取
+                                if (FileUtil.exist(endurancePath)) {
+                                    Flux<DataBuffer> read = DataBufferUtils.read(new FileSystemResource(endurancePath), dataBufferFactory, DEFAULT_CHUNK_SIZE);
+                                    return DataBufferUtils.write(read, randomAccessFile.getChannel())
+                                            .doOnTerminate(() -> {
+                                                // 2021/5/9 复制之后删除该文件或文件夹
+                                                FileUtil.del(endurancePath);
+                                            })
+                                            .then();
+
+//                                    return Mono.create(sink -> {
+//                                        scheduler.schedule(() -> {
+//                                            try (RandomAccessFile enduranceRandomFile = new RandomAccessFile(endurancePath, "rw")) {
+//                                                // 这个 api 使用了 zero copy，但是此 api 会覆盖整个目标文件，从头开始写 -> 所以不行
+//                                                randomAccessFile.getChannel().transferFrom(enduranceRandomFile.getChannel(), 0, enduranceRandomFile.length());
+//                                            } catch (IOException e) {
+//                                                sink.error(e);
+//                                            }
+//                                            sink.success();
+//                                        });
+//                                    });
+                                } else {
+                                    // 如果本地不存在，则从 mongo 下载
+                                    return MongoResourceStorage.this.doDownloadChunk(filesInfo, randomAccessFile).then();
+                                }
+                            })))
+                    .then();
         }
     }
 

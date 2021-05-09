@@ -73,7 +73,7 @@ public class FsFileMetadata implements FileMetadata {
     public static class FsFilesInfo implements FilesInfo {
 
         // 第几片
-        @NonNull    // Todo 不知道好不好使
+        @NonNull    // Todo 不知道好不好使 -> 不好使
         private Integer chunk;
 
         // 对应的 fs.files 表的 id
