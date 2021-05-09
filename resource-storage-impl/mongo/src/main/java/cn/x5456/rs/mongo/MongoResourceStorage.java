@@ -211,7 +211,7 @@ public class MongoResourceStorage implements IResourceStorage {
         // 2021/5/8 如果这个 endurancePath 是我们创建的可以进行 mv，如果是用户提供的则 cp 到缓存文件夹，如果时间长不使用交给自动清理工具
         // 注：这个路径是随机的，每次上传都会创建一个这样的临时文件
         // TODO: 2021/5/8 自动清理工具可以获取系统的磁盘使用情况，当超过阈值（可以设置）再进行清理
-        String endurancePath = LOCAL_TEMP_PATH + IdUtil.fastSimpleUUID() + ENDURANCE_SUFFIX;
+        String endurancePath = LOCAL_TEMP_PATH + IdUtil.fastUUID() + ENDURANCE_SUFFIX;
         return DataBufferUtils.write(dataBufferFlux, Paths.get(endurancePath), StandardOpenOption.CREATE, StandardOpenOption.WRITE)
                 .then(this.doUploadFile(DataBufferUtils.read(new FileSystemResource(endurancePath), dataBufferFactory, DEFAULT_CHUNK_SIZE),
                         fileName, path, endurancePath, true));
@@ -697,7 +697,7 @@ public class MongoResourceStorage implements IResourceStorage {
         public Mono<Boolean> uploadFileChunk(String fileHash, int chunk, Flux<DataBuffer> dataBufferFlux) {
             // 拼接本地缓存路径
             // 注：这个路径每次都是随机生成的
-            String endurancePath = LOCAL_TEMP_PATH + fileHash + File.separator + IdUtil.fastSimpleUUID() + ENDURANCE_SUFFIX;
+            String endurancePath = LOCAL_TEMP_PATH + fileHash + File.separator + IdUtil.fastUUID() + ENDURANCE_SUFFIX;
             FileUtil.touch(endurancePath);
             return DataBufferUtils.write(dataBufferFlux, Paths.get(endurancePath), StandardOpenOption.CREATE, StandardOpenOption.WRITE)
                     .then(this.doUploadFileChunk(fileHash, chunk, dataBufferFlux, endurancePath));
