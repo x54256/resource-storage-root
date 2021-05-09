@@ -2,7 +2,8 @@ package cn.x5456.rs.mongo;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.io.FileUtil;
-import cn.hutool.core.io.IORuntimeException;
+import cn.hutool.core.io.IoUtil;
+import cn.hutool.core.io.file.FileMode;
 import cn.hutool.core.lang.Pair;
 import cn.hutool.core.util.HexUtil;
 import cn.hutool.core.util.IdUtil;
@@ -46,6 +47,8 @@ import reactor.core.scheduler.Schedulers;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.nio.channels.FileLock;
+import java.nio.channels.OverlappingFileLockException;
 import java.nio.charset.Charset;
 import java.nio.file.*;
 import java.security.MessageDigest;
@@ -71,6 +74,14 @@ import static cn.x5456.rs.constant.DataBufferConstant.DEFAULT_CHUNK_SIZE;
 @SuppressWarnings("UnstableApiUsage")
 public class MongoResourceStorage implements IResourceStorage {
 
+    /**
+     * 文件锁的后缀
+     */
+    private static final String LOCK_SUFFIX = ".lock";
+
+    /**
+     * 缓存的后缀
+     */
     private static final String TMP_SUFFIX = ".tmp";
 
     /**
@@ -89,7 +100,7 @@ public class MongoResourceStorage implements IResourceStorage {
         LOCAL_TEMP_PATH = System.getProperty("java.io.tmpdir") + "cn.x5456.rs" + File.separator;
         FileUtil.mkdir(LOCAL_TEMP_PATH);
 
-        // 每次重启清理未"转正"的文件（包括 TMP_SUFFIX 和 ENDURANCE_SUFFIX）
+        // 每次重启清理未"转正"的文件（包括 LOCK_SUFFIX、TMP_SUFFIX 和 ENDURANCE_SUFFIX）
         File[] ls = FileUtil.ls(LOCAL_TEMP_PATH);
         for (File file : ls) {
             if (file.isFile()) {
@@ -307,19 +318,14 @@ public class MongoResourceStorage implements IResourceStorage {
                 .switchIfEmpty(Mono.error(new RuntimeException(StrUtil.format("输入的 path：「{}」不正确！", path))))
                 .flatMap(r -> {
                     String fileHash = r.getFileHash();
-                    return this.download(fileHash).flatMap(srcPath -> {
-                        if (!this.createSymbolicLink(srcPath, localFilePath)) {
-                            try {
-                                FileUtil.copyFile(srcPath, localFilePath, StandardCopyOption.REPLACE_EXISTING);
-                            } catch (IORuntimeException e) {
-                                return Mono.error(e);
-                            }
-                        }
-                        return Mono.just(true);
+                    return this.download(fileHash).map(srcPath -> {
+                        FileUtil.copyFile(srcPath, localFilePath, StandardCopyOption.REPLACE_EXISTING);
+                        return true;
                     });
                 });
     }
 
+    @Deprecated
     private boolean createSymbolicLink(String sourceFile, String linkFilePath) {
         try {
             Files.createSymbolicLink(FileSystems.getDefault().getPath(linkFilePath), FileSystems.getDefault().getPath(sourceFile));
@@ -393,41 +399,12 @@ public class MongoResourceStorage implements IResourceStorage {
     @NotNull
     private Mono<String> doDownload(FsFileMetadata metadata) {
 
-        String fileTempPath = this.getFileTempPath(metadata.getFileHash());
-        String officialPath = this.getFileOfficialPath(metadata.getFileHash());
+        String fileHash = metadata.getFileHash();
+        String fileTempPath = this.getFileTempPath(fileHash);
+        String officialPath = this.getFileOfficialPath(fileHash);
+        String lockPath = this.getLockPath(fileHash);
 
-        // TODO: 2021/5/9 暂时注释掉，感觉用文件锁好一点
-//        /*
-//         0. 如果 tmp 文件存在
-//         1. 检测 hashcode.tmp 是否被删除
-//         2. 如果被删除则检查 hashcode.official 是否被创建出来了
-//         3. 如果没有，则继续下载
-//
-//         虽然我觉得这样写不好，但也想不出别的办法，暂时先这样吧
-//         */
-//            log.info("正在下载文件到：「{}」", fileTempPath);
-//            if (FileUtil.exist(fileTempPath)) {
-//                int randomInt = RandomUtil.randomInt(100, 4000);
-//                while (true) {
-//                    if (!FileUtil.exist(fileTempPath)) {
-//
-//                        if (FileUtil.exist(officialPath)) {
-//                            sink.success(officialPath);
-//                            return;
-//                        } else {
-//                            break;
-//                        }
-//                    }
-//
-//                    try {
-//                        TimeUnit.MILLISECONDS.sleep(randomInt);
-//                    } catch (InterruptedException e) {
-//                        e.printStackTrace();
-//                    }
-//                }
-//            }
-
-        return this.merge(metadata, fileTempPath, officialPath,
+        return this.merge(metadata, fileTempPath, officialPath, lockPath,
                 (randomAccessFile, filesInfo) -> this.doDownloadChunk(filesInfo, randomAccessFile).then())
                 // 将线程从 nio 线程切换到 scheduler
                 .subscribeOn(scheduler);
@@ -442,59 +419,122 @@ public class MongoResourceStorage implements IResourceStorage {
      * 注：调用这个方法不能使用 nio 线程
      */
     @NotNull
-    private Mono<String> merge(FsFileMetadata metadata, String tempPath, String officialPath,
+    private Mono<String> merge(FsFileMetadata metadata, String tempPath, String officialPath, String lockPath,
                                BiFunction<RandomAccessFile, FsFileMetadata.FsFilesInfo, Mono<Void>> function) {
         return Mono.create(sink -> {
-            // 获取每一片的信息，排序
-            List<FsFileMetadata.FsFilesInfo> fsFilesInfoList = metadata.getFilesInfoList();
-            fsFilesInfoList.sort(Comparator.comparingInt(FsFileMetadata.FsFilesInfo::getChunk));
+            /*
+             双重检查锁（文件锁）
 
-            long index = 0;
-            CountDownLatch latch = new CountDownLatch(fsFilesInfoList.size());
-            AtomicBoolean isSuccess = new AtomicBoolean(true);
-            try {
-                // 下载每一片文件到 tempPath
-                for (FsFileMetadata.FsFilesInfo fsFilesInfo : fsFilesInfoList) {
-                    RandomAccessFile randomAccessFile = new RandomAccessFile(tempPath, "rw");
-                    randomAccessFile.seek(index);
-                    index += fsFilesInfo.getChunkSize();
+             0. while(true) 尝试加锁
+             1. 检查 official 文件是否存在
+             2. 如果不存在尝试对 lock 文件加锁
+             3. 如果加锁成功，则执行接下来的逻辑，
+                 逻辑执行成功则文件名"转正"并释放锁
+                 执行失败，则删除 tmp 文件并释放锁
+             4. 如果加锁失败，则 while(true) 等待
+             5. 等待之后获取成功，检查 official 文件是否存在，回到 1
 
-                    function.apply(randomAccessFile, fsFilesInfo)
-                            .onErrorResume(ex -> {
-                                isSuccess.set(false);
-                                sink.error(ex);
-                                return Mono.empty();
-                            }) // TODO: 2021/4/30 没测试，不知道好不好使
-                            .doOnTerminate(() -> {
-                                try {
-                                    randomAccessFile.close();
-                                } catch (IOException e) {
-                                    sink.error(e);
-                                } finally {
-                                    latch.countDown();
-                                }
-                            })
-                            .subscribe();
-                }
+             注：如果下载过程中挂了，再次重启时会清理文件夹，不用考虑
+             */
 
-                // 阻塞住，等待全部线程下载完成
-                log.info("latch：「{}」", latch);
-                latch.await();
-
-                if (isSuccess.get()) {
-                    // 文件更名（"转正"）
-                    FileUtil.move(Paths.get(tempPath), Paths.get(officialPath), true);
-                    log.info("文件「{}」下载完成！", officialPath);
-                    // 写入 LCU 缓存
-                    cache.put(officialPath, metadata);
-                    sink.success(officialPath);
-                } else {
-                    // 下载失败，删除缓存文件
-                    FileUtil.del(tempPath);
-                }
-            } catch (Exception e) {
-                sink.error(e);
+            // 检查 officialPath 是否存在
+            if (FileUtil.exist(officialPath)) {
+                sink.success(officialPath);
+                return;
             }
+
+            // 尝试获取锁
+            this.tryLock(lockPath).subscribe(lockFile -> {
+                try {
+                    // 获取到锁，再次检查 officialPath 是否存在，如果不存在再进行文件的下载工作
+                    if (FileUtil.exist(officialPath)) {
+                        sink.success(officialPath);
+                        return;
+                    }
+
+                    // 开始下载，获取每一片的信息，排序
+                    List<FsFileMetadata.FsFilesInfo> fsFilesInfoList = metadata.getFilesInfoList();
+                    fsFilesInfoList.sort(Comparator.comparingInt(FsFileMetadata.FsFilesInfo::getChunk));
+
+                    long index = 0;
+                    CountDownLatch latch = new CountDownLatch(fsFilesInfoList.size());
+                    AtomicBoolean isSuccess = new AtomicBoolean(true);
+                    try {
+                        // 下载每一片文件到 tempPath
+                        for (FsFileMetadata.FsFilesInfo fsFilesInfo : fsFilesInfoList) {
+                            RandomAccessFile randomAccessFile = new RandomAccessFile(tempPath, "rw");
+                            randomAccessFile.seek(index);
+                            index += fsFilesInfo.getChunkSize();
+
+                            function.apply(randomAccessFile, fsFilesInfo)
+                                    .onErrorResume(ex -> {
+                                        isSuccess.set(false);
+                                        sink.error(ex);
+                                        return Mono.empty();
+                                    }) // TODO: 2021/4/30 没测试，不知道好不好使
+                                    .doOnTerminate(() -> {
+                                        try {
+                                            randomAccessFile.close();
+                                        } catch (IOException e) {
+                                            sink.error(e);
+                                        } finally {
+                                            latch.countDown();
+                                        }
+                                    })
+                                    .subscribe();
+                        }
+
+                        // 阻塞住，等待全部线程下载完成
+                        log.info("latch：「{}」", latch);
+                        latch.await();
+
+                        if (isSuccess.get()) {
+                            // 文件更名（"转正"）
+                            FileUtil.move(Paths.get(tempPath), Paths.get(officialPath), true);
+                            log.info("文件「{}」下载完成！", officialPath);
+                            // 写入 LCU 缓存
+                            cache.put(officialPath, metadata);
+                            sink.success(officialPath);
+                        } else {
+                            // 下载失败，删除缓存文件
+                            FileUtil.del(tempPath);
+                        }
+                    } catch (Exception e) {
+                        sink.error(e);
+                    }
+                } finally {
+                    // 关闭锁文件和文件锁
+                    IoUtil.close(lockFile);
+                    // 删除锁文件
+                    FileUtil.del(lockPath);
+                }
+            });
+        });
+    }
+
+    @NotNull
+    private String getLockPath(String fileHash) {
+        return LOCAL_TEMP_PATH + fileHash + LOCK_SUFFIX;
+    }
+
+    @NotNull
+    private Mono<RandomAccessFile> tryLock(String lockPath) {
+        return Mono.create(sink -> {
+            RandomAccessFile lockFile = FileUtil.createRandomAccessFile(new File(lockPath), FileMode.rw);
+
+            Disposable disposable = scheduler.schedulePeriodically(() -> {
+                try {
+                    // 尝试获取锁
+                    FileLock lock = lockFile.getChannel().tryLock();
+                    log.info("文件锁获取成功：「{}」，lock：「{}」", lockPath, lock);
+                    // 获取成功则返回 lockFile，关闭 lockFile 的时候会自动释放锁
+                    sink.success(lockFile);
+                } catch (OverlappingFileLockException | IOException ex) {
+                    log.info("当前线程文件锁获取失败，等待重试，异常为「{}」，报错信息为：「{}」", ex.getClass().getSimpleName(), ex.getMessage());
+                }
+            }, 0, 1, TimeUnit.SECONDS);
+            // 当结束的时候关闭定时任务
+            sink.onDispose(disposable);
         });
     }
 
@@ -848,19 +888,19 @@ public class MongoResourceStorage implements IResourceStorage {
                 FileUtil.mkdir(enduranceDir);
             }
 
-            // 拼接整个文件的缓存路径
-            // 注：缓存路径与 download 方法的缓存路径不同，防止冲突
-            // TODO: 2021/5/9 要不路径相同！通过文件锁 + 双重检查锁实现
-            String tempPath = enduranceDir + fileHash + TMP_SUFFIX;
+            // 拼接整个文件的缓存路径，通过文件锁保证只有一个"请求"进行文件的下载
+            String tempPath = MongoResourceStorage.this.getFileTempPath(fileHash);
             // 获取正式路径
             String officialPath = MongoResourceStorage.this.getFileOfficialPath(fileHash);
+            // 获取锁文件路径
+            String lockPath = MongoResourceStorage.this.getLockPath(fileHash);
             if (FileUtil.exist(officialPath)) {
                 return Mono.just(officialPath);
             }
 
             return MongoResourceStorage.this.getReadyMetadata(fileHash)
                     .publishOn(scheduler)   // 从 nio 线程切换到 scheduler 线程
-                    .flatMap(metadata -> MongoResourceStorage.this.merge(metadata, tempPath, officialPath,
+                    .flatMap(metadata -> MongoResourceStorage.this.merge(metadata, tempPath, officialPath, lockPath,
                             ((randomAccessFile, filesInfo) -> {
                                 // 拼接当前碎片的本地缓存路径
                                 String endurancePath = enduranceDir + filesInfo.getChunk() + ENDURANCE_SUFFIX;

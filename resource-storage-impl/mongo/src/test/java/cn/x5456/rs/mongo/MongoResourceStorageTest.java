@@ -209,7 +209,7 @@ public class MongoResourceStorageTest {
     }
 
     @Test
-    public void test() {
+    public void testBigDownload() {
         mongoResourceStorage.cleanLocalTemp();
         this.uploadCompleted();
         mongoResourceStorage.cleanLocalTemp();
@@ -222,5 +222,13 @@ public class MongoResourceStorageTest {
         this.uploadCompleted();
 //        mongoResourceStorage.cleanLocalTemp();
         bigFileUploader.transferTo(hash, Paths.get("/Users/x5456/Desktop/1.txt")).block();
+    }
+
+    @Test
+    public void testFileLock() {
+        mongoResourceStorage.cleanLocalTemp();
+        this.uploadCompleted();
+        mongoResourceStorage.downloadFile(pathBig).subscribe();
+        mongoResourceStorage.downloadFile(pathBig).block();
     }
 }

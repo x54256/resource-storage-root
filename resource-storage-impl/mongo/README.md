@@ -138,15 +138,16 @@ v2 通过 @EnableRedisRepositories 用二级索引实现
 剩余功能点：
 
 - zip 解压，内部文件上传 mongo
-- mongo 那些注解好不好使 {@link com.mongodb.lang.NonNull} -> 不好使
-- ~~布隆过滤器线程安全问题 -> 自己学习下 ConcurrentHashMap 封装一下~~
+- ~~mongo 那些注解好不好使 {@link com.mongodb.lang.NonNull} -> 不好使~~
+- ~~布隆过滤器线程安全问题 -> 自己学习下 ConcurrentHashMap 封装一下~~   -> 做不到
 - 你觉得清理策略自动启用好还是指定好，如果自动启用，有什么办法调整那两种策略的优先级吗，因为我只想启用一个
 - 作为 jar 包引入，提供 rest api（包括 swagger） 和钩子（hook）
     1. 文件服务独立部署，通过网关转发
     2. 通过 jar 包引入文件服务，最好提供 webflux api
 - 分布式情况下，结合网关使用
 - 分布式独立部署情况下使用 hash 环算法负载
-- 使用了 hash 环就可以在本地合并了。-> 0. 构造的时候加一个属性，是否需要本地合并该文件
+- ~~使用了 hash 环就可以在本地合并了。-> 0. 构造的时候加一个属性，是否需要本地合并该文件~~
+- ~~优化多个"请求"下载 tmp 文件的情况~~
 - 问题：
     ```
     第一个请求在上传 hash 值为 123abc 的文件，此时他在 metadata 表的状态是上传中。
@@ -162,3 +163,4 @@ v2 通过 @EnableRedisRepositories 用二级索引实现
     
         4）如果我们上传中，第一个请求上传完成了怎么办？
     ```
+- 优化 getReadyMetadata 方法
