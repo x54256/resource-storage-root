@@ -620,6 +620,8 @@ public class MongoResourceStorage implements IResourceStorage {
             6. 如果创建失败，则证明已经有了一个线程抢先上传了，返回 false
              */
 
+            // TODO: 2021/5/9 本地缓存，现在是错的，执行不通过的
+
             return MongoResourceStorage.this.getFileMetadata(fileHash)
                     .switchIfEmpty(this.createOrGet(fileHash))
                     .flatMap(metadata -> this.insertChunkTempInfoV2(fileHash, chunk))

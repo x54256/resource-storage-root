@@ -1,6 +1,5 @@
 package cn.x5456.rs.def.block;
 
-import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.lang.Pair;
 import cn.x5456.rs.def.BigFileUploader;
 import cn.x5456.rs.def.IResourceStorage;
@@ -12,7 +11,6 @@ import org.springframework.core.io.buffer.DataBufferUtils;
 import org.springframework.core.io.buffer.DefaultDataBufferFactory;
 import reactor.core.publisher.Flux;
 
-import java.io.File;
 import java.io.InputStream;
 import java.util.List;
 
@@ -29,15 +27,6 @@ public class ResourceStorageBlockWrapper implements IBlockResourceStorage {
     private final DataBufferFactory dataBufferFactory;
 
     private final IResourceStorage resourceStorage;
-
-    private static final String LOCAL_TEMP_PATH;
-
-    static {
-        LOCAL_TEMP_PATH = System.getProperty("java.io.tmpdir") + File.separator + "cn.x5456.rs.block" + File.separator;
-        // 每次重启删除所有文件
-        FileUtil.del(LOCAL_TEMP_PATH);
-        FileUtil.mkdir(LOCAL_TEMP_PATH);
-    }
 
     public ResourceStorageBlockWrapper(IResourceStorage resourceStorage) {
         this(new DefaultDataBufferFactory(), resourceStorage);
