@@ -68,6 +68,14 @@ public interface BigFileUploader {
     Mono<Boolean> uploadError(String fileHash);
 
     /**
+     * 本地碎片合并，如果不存在则去 mongo 下载
+     *
+     * @param fileHash 文件 hash
+     * @return 本地缓存路径（official）
+     */
+    Mono<String> endurance(String fileHash);
+
+    /**
      * 持久化到指定路径
      *
      * @param fileHash 文件 hash

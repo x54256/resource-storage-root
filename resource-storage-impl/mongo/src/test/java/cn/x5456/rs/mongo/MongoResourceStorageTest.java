@@ -221,6 +221,6 @@ public class MongoResourceStorageTest {
         mongoResourceStorage.cleanLocalTemp();
         this.uploadCompleted();
 //        mongoResourceStorage.cleanLocalTemp();
-        bigFileUploader.transferTo(hash, Paths.get("123")).block();
+        bigFileUploader.transferTo(hash, Paths.get("/Users/x5456/Desktop/1.txt")).block();
     }
 }

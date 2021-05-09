@@ -835,14 +835,13 @@ public class MongoResourceStorage implements IResourceStorage {
         }
 
         /**
-         * 持久化到指定路径
+         * 本地碎片合并，如果不存在则去 mongo 下载
          *
          * @param fileHash 文件 hash
-         * @param dest     目标路径
+         * @return 本地缓存路径（official）
          */
         @Override
-        public Mono<Void> transferTo(String fileHash, Path dest) {
-
+        public Mono<String> endurance(String fileHash) {
             // 拼接碎片缓存文件夹，如果不存在则创建
             String enduranceDir = LOCAL_TEMP_PATH + fileHash + File.separator;
             if (!FileUtil.exist(enduranceDir)) {
@@ -850,10 +849,14 @@ public class MongoResourceStorage implements IResourceStorage {
             }
 
             // 拼接整个文件的缓存路径
+            // 注：缓存路径与 download 方法的缓存路径不同，防止冲突
+            // TODO: 2021/5/9 要不路径相同！通过文件锁 + 双重检查锁实现
             String tempPath = enduranceDir + fileHash + TMP_SUFFIX;
             // 获取正式路径
             String officialPath = MongoResourceStorage.this.getFileOfficialPath(fileHash);
-
+            if (FileUtil.exist(officialPath)) {
+                return Mono.just(officialPath);
+            }
 
             return MongoResourceStorage.this.getReadyMetadata(fileHash)
                     .publishOn(scheduler)   // 从 nio 线程切换到 scheduler 线程
@@ -887,8 +890,22 @@ public class MongoResourceStorage implements IResourceStorage {
                                     return MongoResourceStorage.this.doDownloadChunk(filesInfo, randomAccessFile).then();
                                 }
                             })))
-                    .then();
+                    .then(Mono.just(officialPath));
+        }
+
+        /**
+         * 持久化到指定路径
+         *
+         * @param fileHash 文件 hash
+         * @param dest     目标路径
+         */
+        @Override
+        public Mono<Void> transferTo(String fileHash, Path dest) {
+            return this.endurance(fileHash)
+                    .flatMap(officialPath -> {
+                        FileUtil.copyFile(Paths.get(officialPath), dest, StandardCopyOption.REPLACE_EXISTING);
+                        return Mono.empty();
+                    });
         }
     }
-
 }
