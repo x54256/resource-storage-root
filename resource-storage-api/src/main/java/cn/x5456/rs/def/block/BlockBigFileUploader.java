@@ -5,6 +5,7 @@ import cn.x5456.rs.def.UploadProgress;
 import cn.x5456.rs.entity.ResourceInfo;
 
 import java.io.InputStream;
+import java.nio.file.Path;
 import java.util.List;
 
 public interface BlockBigFileUploader {
@@ -65,4 +66,20 @@ public interface BlockBigFileUploader {
      * @return 操作是否成功
      */
     Boolean uploadError(String fileHash);
+
+    /**
+     * 本地碎片合并，如果不存在则去 mongo 下载，最好配合 hash 环负载算法使用
+     *
+     * @param fileHash 文件 hash
+     * @return 本地缓存路径（official）
+     */
+    String endurance(String fileHash);
+
+    /**
+     * 持久化到指定路径
+     *
+     * @param fileHash 文件 hash
+     * @param dest     目标路径
+     */
+    void transferTo(String fileHash, Path dest);
 }

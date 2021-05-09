@@ -12,6 +12,7 @@ import org.springframework.core.io.buffer.DefaultDataBufferFactory;
 import reactor.core.publisher.Flux;
 
 import java.io.InputStream;
+import java.nio.file.Path;
 import java.util.List;
 
 import static cn.x5456.rs.constant.DataBufferConstant.DEFAULT_CHUNK_SIZE;
@@ -196,6 +197,28 @@ public class ResourceStorageBlockWrapper implements IBlockResourceStorage {
          */
         public Boolean uploadError(String fileHash) {
             return bigFileUploader.uploadError(fileHash).block();
+        }
+
+        /**
+         * 本地碎片合并，如果不存在则去 mongo 下载，最好配合 hash 环负载算法使用
+         *
+         * @param fileHash 文件 hash
+         * @return 本地缓存路径（official）
+         */
+        @Override
+        public String endurance(String fileHash) {
+            return bigFileUploader.endurance(fileHash).block();
+        }
+
+        /**
+         * 持久化到指定路径
+         *
+         * @param fileHash 文件 hash
+         * @param dest     目标路径
+         */
+        @Override
+        public void transferTo(String fileHash, Path dest) {
+            bigFileUploader.transferTo(fileHash, dest).block();
         }
     }
 }
