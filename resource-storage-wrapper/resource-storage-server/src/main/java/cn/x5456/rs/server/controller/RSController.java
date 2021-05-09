@@ -168,13 +168,13 @@ public class RSController {
     }
 
     @ApiOperation("大文件上传 - 获取上传进度")
-    @GetMapping("/v1/file/big/{fileHash}")
+    @GetMapping("/v1/files/big/{fileHash}")
     public Flux<Pair<Integer, UploadProgress>> uploadProgress(@PathVariable String fileHash) {
         return resourceStorage.getBigFileUploader().uploadProgress(fileHash);
     }
 
     @ApiOperation("大文件上传 - 全部上传成功，执行“合并”操作")
-    @PostMapping("/v1/file/big/{fileHash}")
+    @PostMapping("/v1/files/big/{fileHash}")
     public Mono<Boolean> uploadCompleted(@PathVariable String fileHash, @RequestParam String fileName,
                                          @RequestParam int totalNumberOfChunks) {
         String path = IdUtil.objectId();
@@ -182,7 +182,7 @@ public class RSController {
     }
 
     @ApiOperation("大文件上传 - 上传失败，执行清理操作")
-    @DeleteMapping("/v1/file/big/{fileHash}")
+    @DeleteMapping("/v1/files/big/{fileHash}")
     public Mono<Boolean> uploadError(@PathVariable String fileHash) {
         return resourceStorage.getBigFileUploader().uploadError(fileHash);
     }
