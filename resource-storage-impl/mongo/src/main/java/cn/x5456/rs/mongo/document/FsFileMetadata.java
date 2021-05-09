@@ -3,7 +3,6 @@ package cn.x5456.rs.mongo.document;
 import cn.x5456.rs.def.UploadProgress;
 import cn.x5456.rs.entity.FileMetadata;
 import cn.x5456.rs.entity.FilesInfo;
-import com.mongodb.lang.NonNull;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import org.springframework.data.annotation.Id;
@@ -73,7 +72,6 @@ public class FsFileMetadata implements FileMetadata {
     public static class FsFilesInfo implements FilesInfo {
 
         // 第几片
-        @NonNull    // Todo 不知道好不好使 -> 不好使
         private Integer chunk;
 
         // 对应的 fs.files 表的 id

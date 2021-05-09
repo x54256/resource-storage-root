@@ -32,13 +32,25 @@ public class FsFileTemp {
     // 文件 hash 值，建议使用 sha256
     private String fileHash;
 
-    // 第几片
+    /**
+     * 第几片
+     * <p>
+     * 此字段需与 {@link FsFileMetadata.FsFilesInfo#chunk} 相同
+     */
     private Integer chunk;
 
-    // 对应的 fs.files 表的 id
+    /**
+     * 对应的 fs.files 表的 id
+     * <p>
+     * 此字段需与 {@link FsFileMetadata.FsFilesInfo#filesId} 相同
+     */
     private String filesId;
 
-    // 当前片的大小
+    /**
+     * 当前片的大小
+     * <p>
+     * 此字段需与 {@link FsFileMetadata.FsFilesInfo#chunkSize} 相同
+     */
     private Long chunkSize;
 
     // 上传进度
