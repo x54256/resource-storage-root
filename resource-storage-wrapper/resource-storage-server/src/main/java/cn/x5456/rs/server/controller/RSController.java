@@ -28,6 +28,7 @@ import java.nio.charset.StandardCharsets;
  */
 @Api(tags = "文件存储服务")
 @RestController
+@RequestMapping("/rest/rs")
 public class RSController {
 
     @Autowired
