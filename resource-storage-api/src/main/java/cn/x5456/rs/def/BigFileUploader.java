@@ -57,7 +57,7 @@ public interface BigFileUploader {
      * @param path                服务上存储的标识
      * @return 操作是否成功
      */
-    Mono<Boolean> uploadCompleted(String fileHash, String fileName, int totalNumberOfChunks, String path);
+    Mono<ResourceInfo> uploadCompleted(String fileHash, String fileName, int totalNumberOfChunks, String path);
 
     /**
      * 上传失败，清理缓存表

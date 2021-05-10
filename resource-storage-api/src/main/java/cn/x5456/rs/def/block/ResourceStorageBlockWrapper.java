@@ -185,7 +185,7 @@ public class ResourceStorageBlockWrapper implements IBlockResourceStorage {
          * @param path                服务上存储的标识
          * @return 操作是否成功
          */
-        public Boolean uploadCompleted(String fileHash, String fileName, int totalNumberOfChunks, String path) {
+        public ResourceInfo uploadCompleted(String fileHash, String fileName, int totalNumberOfChunks, String path) {
             return bigFileUploader.uploadCompleted(fileHash, fileName, totalNumberOfChunks, path).block();
         }
 

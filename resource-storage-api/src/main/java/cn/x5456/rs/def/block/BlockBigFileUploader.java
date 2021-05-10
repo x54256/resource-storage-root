@@ -57,7 +57,7 @@ public interface BlockBigFileUploader {
      * @param path                服务上存储的标识
      * @return 操作是否成功
      */
-    Boolean uploadCompleted(String fileHash, String fileName, int totalNumberOfChunks, String path);
+    ResourceInfo uploadCompleted(String fileHash, String fileName, int totalNumberOfChunks, String path);
 
     /**
      * 上传失败，清理缓存表

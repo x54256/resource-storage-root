@@ -175,7 +175,7 @@ public class RSController {
 
     @ApiOperation("大文件上传 - 全部上传成功，执行“合并”操作")
     @PostMapping("/v1/files/big/{fileHash}")
-    public Mono<Boolean> uploadCompleted(@PathVariable String fileHash, @RequestParam String fileName,
+    public Mono<ResourceInfo> uploadCompleted(@PathVariable String fileHash, @RequestParam String fileName,
                                          @RequestParam int totalNumberOfChunks) {
         String path = IdUtil.objectId();
         return resourceStorage.getBigFileUploader().uploadCompleted(fileHash, fileName, totalNumberOfChunks, path);

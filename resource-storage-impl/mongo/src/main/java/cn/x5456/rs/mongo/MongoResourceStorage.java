@@ -81,21 +81,31 @@ public class MongoResourceStorage implements IResourceStorage {
 
     /**
      * 缓存的后缀
+     * <p>
+     * download 方法下载时的临时文件，为什么不直接下载到 official 文件中呢？
+     * 为了防止下载到一半服务器"停电"，再次启动的时候把没下完的文件当做正式文件
      */
     private static final String TMP_SUFFIX = ".tmp";
 
     /**
      * 正式的后缀
+     * <p>
+     * 可以下载的正式文件，创建正式文件的时候必须获取文件锁 {@link MongoResourceStorage#LOCK_SUFFIX}
      */
     private static final String OFFICIAL_SUFFIX = ".official";
 
     /**
-     * 持久化临时文件的后缀
+     * 临时文件的后缀
+     * <p>
+     * 通过 DataBufferFlux 上传的时候临时保存的文件后缀
      */
     private static final String ENDURANCE_SUFFIX = ".endurance";
 
     /**
      * 大文件上传时碎片持久化的后缀
+     * <p>
+     * 为了降低 {@link BigFileUploaderImpl#endurance(java.lang.String)} 与 mongo 的交互次数，能利用缓存就是用缓存，
+     * 所以在第一次上传完碎片文件之后，将其后缀改为 .chunk，以便后续 {@link BigFileUploaderImpl#endurance(java.lang.String)} 方法使用
      */
     private static final String CHUNK_SUFFIX = ".chunk";
 
@@ -179,9 +189,7 @@ public class MongoResourceStorage implements IResourceStorage {
      */
     @Override
     public Mono<ResourceInfo> uploadFile(String localFilePath, String fileName, String path) {
-        FileSystemResource resource = new FileSystemResource(localFilePath);
-        Flux<DataBuffer> dataBufferFlux = DataBufferUtils.read(resource, dataBufferFactory, DEFAULT_CHUNK_SIZE);
-        return this.uploadFile(dataBufferFlux, fileName, path, localFilePath);
+        return this.doUploadFile(localFilePath, fileName, path, false);
     }
 
     /**
@@ -194,54 +202,59 @@ public class MongoResourceStorage implements IResourceStorage {
      */
     @Override
     public Mono<ResourceInfo> uploadFile(Flux<DataBuffer> dataBufferFlux, String fileName, String path) {
-        return this.uploadFile(dataBufferFlux, fileName, path, null);
-    }
-
-    /**
-     * @param dataBufferFlux dataBufferFlux
-     * @param fileName       文件名
-     * @param path           服务上存储的标识
-     * @param originalPath   原始文件路径，如果传 null 则需要持久化
-     * @return 是否上传成功
-     */
-    private Mono<ResourceInfo> uploadFile(Flux<DataBuffer> dataBufferFlux, String fileName, String path, String originalPath) {
-        if (StrUtil.isNotBlank(originalPath)) {
-            return this.doUploadFile(dataBufferFlux, fileName, path, originalPath, false);
-        }
         // 2021/5/8 如果这个 endurancePath 是我们创建的可以进行 mv，如果是用户提供的则 cp 到缓存文件夹，如果时间长不使用交给自动清理工具
         // 注：这个路径是随机的，每次上传都会创建一个这样的临时文件
         // TODO: 2021/5/8 自动清理工具可以获取系统的磁盘使用情况，当超过阈值（可以设置）再进行清理
         String endurancePath = LOCAL_TEMP_PATH + IdUtil.fastUUID() + ENDURANCE_SUFFIX;
         return DataBufferUtils.write(dataBufferFlux, Paths.get(endurancePath), StandardOpenOption.CREATE, StandardOpenOption.WRITE)
-                .then(this.doUploadFile(DataBufferUtils.read(new FileSystemResource(endurancePath), dataBufferFactory, DEFAULT_CHUNK_SIZE),
-                        fileName, path, endurancePath, true));
+                .then(this.doUploadFile(endurancePath, fileName, path, true));
     }
 
     /**
      * dataBufferFlux 方式上传文件到文件服务
      *
-     * @param dataBufferFlux dataBufferFlux
-     * @param fileName       文件名
-     * @param path           服务上存储的标识
-     * @param endurancePath  本地持久化的路径
-     * @param mv             是否需要删除持久化的缓存文件
+     * @param endurancePath 本地持久化的路径
+     * @param fileName      文件名
+     * @param path          服务上存储的标识
+     * @param mv            是否需要删除持久化的缓存文件
      * @return 是否上传成功
      */
     @NotNull
-    private Mono<ResourceInfo> doUploadFile(Flux<DataBuffer> dataBufferFlux, String fileName, String path, String endurancePath, boolean mv) {
+    private Mono<ResourceInfo> doUploadFile(String endurancePath, String fileName, String path, boolean mv) {
+        Flux<DataBuffer> dataBufferFlux = DataBufferUtils.read(new FileSystemResource(endurancePath), dataBufferFactory, DEFAULT_CHUNK_SIZE);
         return this.calcFileHashCode(dataBufferFlux)
                 .flatMap(fileHash -> this.getFileMetadata(fileHash)
                         .switchIfEmpty(
                                 this.doUploadFile(fileHash, dataBufferFlux)
-                                        // 如果是新上传的则复制到本地缓存文件夹
-                                        .doOnSuccess(metadata -> {
+                                        // 如果是新上传的则复制到本地缓存文件夹（开新线程）
+                                        .doOnSuccess(metadata -> scheduler.schedule(() -> {
                                             String officialPath = this.getFileOfficialPath(fileHash);
-                                            if (mv) {
-                                                FileUtil.move(Paths.get(endurancePath), Paths.get(officialPath), true);
-                                            } else {
-                                                FileUtil.copyFile(endurancePath, officialPath, StandardCopyOption.REPLACE_EXISTING);
+                                            String lockPath = this.getLockPath(fileHash);
+                                            // 检查 officialPath 是否存在
+                                            if (FileUtil.exist(officialPath)) {
+                                                return;
                                             }
-                                        })
+
+                                            // 尝试获取锁
+                                            this.tryLock(lockPath).subscribe(lockFile -> {
+                                                try {
+                                                    // 获取到锁，再次检查 officialPath 是否存在，如果不存在再进行文件的下载工作
+                                                    if (FileUtil.exist(officialPath)) {
+                                                        return;
+                                                    }
+                                                    if (mv) {
+                                                        FileUtil.move(Paths.get(endurancePath), Paths.get(officialPath), true);
+                                                    } else {
+                                                        FileUtil.copyFile(endurancePath, officialPath, StandardCopyOption.REPLACE_EXISTING);
+                                                    }
+                                                } finally {
+                                                    // 关闭锁文件和文件锁
+                                                    IoUtil.close(lockFile);
+                                                    // 删除锁文件
+                                                    FileUtil.del(lockPath);
+                                                }
+                                            });
+                                        }))
                         )
                         .flatMap(m -> this.insertResource(m, fileName, path))
                         // 当文件引用建立成功之后删除缓存文件
@@ -846,7 +859,7 @@ public class MongoResourceStorage implements IResourceStorage {
          * @return 操作是否成功
          */
         @Override
-        public Mono<Boolean> uploadCompleted(String fileHash, String fileName, int totalNumberOfChunks, String path) {
+        public Mono<ResourceInfo> uploadCompleted(String fileHash, String fileName, int totalNumberOfChunks, String path) {
             /*
             1. 校验传入的片数是否与系统中的片数相同
             2. 根据 fileHash 查出元数据信息，完善元数据信息
@@ -879,10 +892,13 @@ public class MongoResourceStorage implements IResourceStorage {
                                         })
                                         // 在 fs.resource 添加引用
                                         .flatMap(metadata -> MongoResourceStorage.this.insertResource(metadata, fileName, path))
-                                        // 删除缓存表数据 todo 原子性，改为单独开一个线程删除吧，不管他成不成功了
-                                        // todo 不过支持事务了 since 2.2. Use {@code @Transactional} or {@link TransactionalOperator}.
-                                        // todo 感觉还是改成事务吧
-                                        .flatMap(r -> this.cleanTemp(fileHash));
+                                        // 合并成功
+                                        .doOnSuccess(f -> {
+                                            // 删除缓存表数据
+                                            this.cleanTemp(fileHash).subscribe();
+                                            // 持久化到正式路径
+                                            this.endurance(fileHash).subscribe();
+                                        });
                             }
                     );
         }
@@ -951,7 +967,8 @@ public class MongoResourceStorage implements IResourceStorage {
                                     // 如果本地不存在，则从 mongo 下载
                                     return MongoResourceStorage.this.doDownloadChunk(filesInfo, randomAccessFile).then();
                                 }
-                            })))
+                            })
+                    ))
                     .then(Mono.just(officialPath));
         }
 
