@@ -134,13 +134,18 @@ public class RSController {
                             .filename(fileName, StandardCharsets.UTF_8)
                             .build();
                     responseHeaders.setContentDisposition(disposition);
-
-                    // TODO: 2021/5/9 应该是可以通过这个值来实现浏览器预览功能的 -> 好像不行，可能是因为我的文件后缀不是 pdf 这样的
-                    // 设置 Content-Type，不设置的话默认为 text/html 会直接在页面"打开"
-                    responseHeaders.setContentType(MediaType.APPLICATION_OCTET_STREAM);
                     return Mono.just(new FileSystemResource(localFilePath));
                 });
     }
+
+    /*
+    文件预览测试结果：
+    1. 加 MediaType 的请求头 Accept "可能可以"，但是无法测试
+    2. responseHeaders 不能 setContentDisposition(disposition);
+    3. 只要 setContentDisposition 了，那么一定是下载，不用设置响应 content-type
+
+    curl -i -H 'Accept: image/png' 'http://127.0.0.1:8080/rest/rs/v2/files/preview/6098c2c0ee92ec96a351eb7d' image/png
+     */
 
     @ApiOperation("删除文件")
     @DeleteMapping("/v1/files/{path}")

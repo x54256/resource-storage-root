@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
+import java.nio.channels.OverlappingFileLockException;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -27,7 +28,7 @@ public class FileLockTest {
         而另一些操作系统的文件锁是询问式的(advisory)，意思是说要想拥有进程互斥的效果，其它的进程也必须也按照API所规定的那样来申请或者检测文件锁，
         不然将起不到进程互斥的功能。所以文档里建议将所有系统都当做是询问式系统来处理，这样程序更加安全也更容易移植。
      */
-    @Test
+    @Test(expected = OverlappingFileLockException.class)
     public void test() throws Exception {
         String s = "/Users/x5456/Desktop/1.txt";
         Thread t1 = new Thread(() -> {

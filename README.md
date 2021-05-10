@@ -13,7 +13,8 @@
         - ~~webmvc 版~~
         - ~~webflux 版 + 自动装配~~ -> 废弃原因：其实大家都会对返回值进行一次包装，那还不如让他引入 starter 自己写呢。
     2. 文件服务独立部署：
-        - webflux 提供 api 作为一个服务独立部署  -> 通过 profile 选择使用哪种实现的 starter
-            webmvc 阻塞版服务
-        - 提供依赖，通过 gateway 或 webclient 【负载】转发到文件服务  -> 通过 profile 选择采用集群还是单体（采用注册中心）
-            - 通过 RouterFunctions 好像也行呀
+        - webflux 提供 api 作为一个服务独立部署 -> 通过 profile 选择使用哪种实现的 starter
+            - webmvc 阻塞版服务
+        - 提供依赖，通过 gateway 或 webclient 【负载】转发到文件服务 -> 通过 profile 选择采用集群还是单体（采用注册中心）
+            - 如果是 webflux 通过 RouterFunctions 好像也行呀
+            - mvc 应该也有这样的东西
