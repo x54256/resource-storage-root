@@ -192,8 +192,8 @@ public class MongoResourceStorageTest {
     public void uploadCompleted() {
         this.uploadFileChunk();
 
-        Boolean block = bigFileUploader.uploadCompleted(hash, mergeChunkName, 2, pathBig).block();
-        Assert.assertTrue(block);
+        ResourceInfo block = bigFileUploader.uploadCompleted(hash, mergeChunkName, 2, pathBig).block();
+        Assert.assertNotNull(block);
     }
 
     @Test

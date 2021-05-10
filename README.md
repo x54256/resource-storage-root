@@ -16,3 +16,4 @@
         - webflux 提供 api 作为一个服务独立部署  -> 通过 profile 选择使用哪种实现的 starter
             webmvc 阻塞版服务
         - 提供依赖，通过 gateway 或 webclient 【负载】转发到文件服务  -> 通过 profile 选择采用集群还是单体（采用注册中心）
+            - 通过 RouterFunctions 好像也行呀
