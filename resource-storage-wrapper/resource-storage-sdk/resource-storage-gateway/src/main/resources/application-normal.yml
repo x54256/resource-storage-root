@@ -1,0 +1,14 @@
+spring:
+  cloud:
+    loadbalancer:
+      ribbon:
+        enabled: false
+    gateway:
+      routes:
+        - id: rs-service
+          uri: http://127.0.0.1:8080
+          predicates:
+            - Path=/rest/rs/upload/**
+eureka:
+  client:
+    enabled: false

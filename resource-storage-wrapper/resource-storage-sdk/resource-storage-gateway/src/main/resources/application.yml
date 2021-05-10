@@ -1,0 +1,16 @@
+server:
+  port: 9000
+management:
+  endpoints:
+    web:
+      exposure:
+        include: '*'
+  endpoint:
+    health:
+      show-details: always
+
+spring:
+  application:
+    name: gateway-server
+  profiles:
+    active: @profile.active@
