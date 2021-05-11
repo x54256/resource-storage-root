@@ -20,8 +20,6 @@ import cn.x5456.rs.mongo.document.FsResourceInfo;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.Lists;
-import com.google.common.hash.BloomFilter;
-import com.google.common.hash.Funnels;
 import com.mongodb.client.result.DeleteResult;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
@@ -49,7 +47,6 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.channels.FileLock;
 import java.nio.channels.OverlappingFileLockException;
-import java.nio.charset.Charset;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
@@ -125,14 +122,6 @@ public class MongoResourceStorage implements IResourceStorage {
             }
         }
     }
-
-    /**
-     * 布隆过滤器，过滤重复请求 todo 配合 hash 环
-     */
-    @SuppressWarnings("UnstableApiUsage")
-    private final BloomFilter<CharSequence> bloomFilter = BloomFilter.create(
-            // Funnel 预估元素个数 误判率
-            Funnels.stringFunnel(Charset.defaultCharset()), 1024, 0.01);
 
     /**
      * 构建一个 LRU 缓存实例 todo 配合 hash 环
@@ -754,20 +743,8 @@ public class MongoResourceStorage implements IResourceStorage {
         // 方案二：为他计算出一个唯一的 id(hash 算法) + 把 save 换成 insert
         // 2021/4/29 小想法，把 id 设置成一样的呢？ 会不会把 id 的索引删了 -> 测试结果，不会
         // TODO: 2021/5/6 id 和唯一索引有啥区别
-        @SuppressWarnings("UnstableApiUsage")
         private Mono<FsFileTemp> insertChunkTempInfoV2(String fileHash, int chunk) throws DuplicateKeyException {
             String key = fileHash + "_" + chunk;
-
-            // TODO: 2021/4/30 下面这个先查询在添加的动作是线程不安全的，但也不想加锁了，等他们以后 api 支持吧，也可以自己学习下 ConcurrentHashMap 封装一下
-            // 也可以使用布隆过滤器过滤下，毕竟下面这个动作还是比较重的，最好保证他能成功
-            // 注意：如果声称其中包含元素，则可能是错误的，但是如果声明其中不包含元素，则肯定是正确的。
-            if (bloomFilter.mightContain(key)) {
-                log.info("布隆过滤器过滤的 key 重复：「{}」", key);
-                // 2021/4/29 怎样不用抛出异常的这种方式进行流的转变 -> 返回一个空对象，最后 switchIfEmpty
-                return Mono.empty();
-            }
-            // 否则将当前 key 添加进去
-            bloomFilter.put(key);
 
             // 尝试添加一条记录
             FsFileTemp fsFileTemp = new FsFileTemp();
