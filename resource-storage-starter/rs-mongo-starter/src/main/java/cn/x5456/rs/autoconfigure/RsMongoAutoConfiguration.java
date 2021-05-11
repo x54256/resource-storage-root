@@ -4,6 +4,7 @@ import cn.x5456.rs.def.IResourceStorage;
 import cn.x5456.rs.def.block.IBlockResourceStorage;
 import cn.x5456.rs.def.block.ResourceStorageBlockWrapper;
 import cn.x5456.rs.mongo.MongoResourceStorage;
+import cn.x5456.rs.mongo.cleanstrategy.MongoSocketTimeoutHolder;
 import com.mongodb.reactivestreams.client.MongoClient;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
@@ -38,4 +39,10 @@ public class RsMongoAutoConfiguration {
     public IBlockResourceStorage blockMongoResourceStorage(DataBufferFactory dataBufferFactory, IResourceStorage resourceStorage) {
         return new ResourceStorageBlockWrapper(dataBufferFactory, resourceStorage);
     }
+
+    @Bean
+    public MongoSocketTimeoutHolder mongoSocketTimeoutHolder() {
+        return new MongoSocketTimeoutHolder();
+    }
+
 }

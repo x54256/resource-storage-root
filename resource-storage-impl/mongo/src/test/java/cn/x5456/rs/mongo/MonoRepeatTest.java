@@ -31,7 +31,7 @@ public class MonoRepeatTest {
         Mono.just(atomicInteger)
                 .flatMap(x -> {
                     log.info("x：「{}」", x);
-                    if (atomicInteger.getAndIncrement() == 8) {
+                    if (atomicInteger.getAndIncrement() == 80) {
                         return Mono.just(x);
                     }
                     return Mono.error(new RuntimeException("test retry"));
@@ -41,7 +41,7 @@ public class MonoRepeatTest {
                 .block();
     }
 
-    @Test(expected = RuntimeException.class)
+    @Test
     public void testV2() {
         AtomicInteger atomicInteger = new AtomicInteger(5);
 

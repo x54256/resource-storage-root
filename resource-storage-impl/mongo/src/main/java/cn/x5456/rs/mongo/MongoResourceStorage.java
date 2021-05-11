@@ -751,6 +751,7 @@ public class MongoResourceStorage implements IResourceStorage {
         // 方案二：为他计算出一个唯一的 id(hash 算法) + 把 save 换成 insert
         // 2021/4/29 小想法，把 id 设置成一样的呢？ 会不会把 id 的索引删了 -> 测试结果，不会
         // TODO: 2021/5/6 id 和唯一索引有啥区别
+        @SuppressWarnings("UnstableApiUsage")
         private Mono<FsFileTemp> insertChunkTempInfoV2(String fileHash, int chunk) throws DuplicateKeyException {
             String key = fileHash + "_" + chunk;
 
