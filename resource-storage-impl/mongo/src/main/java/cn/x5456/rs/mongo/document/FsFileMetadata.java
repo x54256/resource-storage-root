@@ -52,7 +52,7 @@ public class FsFileMetadata implements FileMetadata {
     private List<FsFilesInfo> filesInfoList;
 
     // 其他元数据信息
-    private Map<String, Object> metadata;
+    private Map<String, Object> fileContentMetadata;
 
     // 上传进度
     private UploadProgress uploadProgress;

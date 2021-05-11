@@ -57,9 +57,7 @@ import java.nio.file.StandardOpenOption;
 import java.security.MessageDigest;
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -131,6 +129,7 @@ public class MongoResourceStorage implements IResourceStorage {
     /**
      * 布隆过滤器，过滤重复请求 todo 配合 hash 环
      */
+    @SuppressWarnings("UnstableApiUsage")
     private final BloomFilter<CharSequence> bloomFilter = BloomFilter.create(
             // Funnel 预估元素个数 误判率
             Funnels.stringFunnel(Charset.defaultCharset()), 1024, 0.01);
@@ -160,6 +159,9 @@ public class MongoResourceStorage implements IResourceStorage {
         this.mongoTemplate = mongoTemplate;
         this.gridFsTemplate = gridFsTemplate;
         this.scheduler = schedulerObjectProvider.getIfUnique(Schedulers::elastic);
+
+        // 启动清理本地文件缓存策略
+        new CleanLocalFileCache().start();
     }
 
     /**
@@ -248,6 +250,7 @@ public class MongoResourceStorage implements IResourceStorage {
                                                     } else {
                                                         FileUtil.copyFile(endurancePath, officialPath, StandardCopyOption.REPLACE_EXISTING);
                                                     }
+                                                    cache.put(officialPath, metadata);
                                                 } finally {
                                                     // 关闭锁文件和文件锁
                                                     IoUtil.close(lockFile);
@@ -925,6 +928,37 @@ public class MongoResourceStorage implements IResourceStorage {
                         FileUtil.copyFile(Paths.get(officialPath), dest, StandardCopyOption.REPLACE_EXISTING);
                         return Mono.empty();
                     });
+        }
+    }
+
+
+    /**
+     * 清理本地文件缓存
+     * <p>
+     * 注：只清理 .official 后缀的文件
+     * <p>
+     * 假如重启服务了，LCU 缓存被清理了怎么办？清理的时间间隔长一点。
+     */
+    class CleanLocalFileCache {
+
+        public void start() {
+            scheduler.schedulePeriodically(() -> {
+                log.info("正在清理本地文件缓存！");
+                Set<String> frequentlyUsedPath = cache.asMap().keySet();
+                File tempDir = new File(LOCAL_TEMP_PATH);
+                File[] files = tempDir.listFiles(file -> {
+                    if (file.isFile()) {
+                        return file.getName().endsWith(OFFICIAL_SUFFIX);
+                    }
+                    return false;
+                });
+
+                Arrays.stream(files).forEach(file -> {
+                    if (!frequentlyUsedPath.contains(file.getAbsolutePath())) {
+                        FileUtil.del(file);
+                    }
+                });
+            }, 12, 12, TimeUnit.HOURS);
         }
     }
 }

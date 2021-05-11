@@ -10,6 +10,7 @@
 
 3. 当前面操作返回的是一个空的 Publisher map() 是拿不到数据的，所以不能通过 .map(x -> if(x == null)) 来做一些事情，要使用 switchIfEmpty() 来进一步操作
 4. 如果代码不涉及 scheduler 最好不要使用 sink，flatMap 和 map 可以胜任绝大部分任务。
+5. 通过文件锁实现正式文件只有一个进程在操作（双重检查锁）
 
 问题：本地文件没就绪怎么办？  ->  下载完成后更名  .tmp -> .xxx
 
@@ -137,7 +138,7 @@ v2 通过 @EnableRedisRepositories 用二级索引实现
 
 剩余功能点：
 
-- zip 解压，内部文件上传 mongo
+- zip 解压，内部文件上传 mongo（感觉用事件比较好；异步）
 - ~~mongo 那些注解好不好使 {@link com.mongodb.lang.NonNull} -> 不好使~~
 - ~~布隆过滤器线程安全问题 -> 自己学习下 ConcurrentHashMap 封装一下~~   -> 做不到
 - 你觉得清理策略自动启用好还是指定好，如果自动启用，有什么办法调整那两种策略的优先级吗，因为我只想启用一个

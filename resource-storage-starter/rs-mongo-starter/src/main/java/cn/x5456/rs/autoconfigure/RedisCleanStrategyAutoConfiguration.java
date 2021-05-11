@@ -1,5 +1,6 @@
 package cn.x5456.rs.autoconfigure;
 
+import cn.x5456.rs.cleanstrategy.CleanUnUploadedTempStrategy;
 import cn.x5456.rs.mongo.cleanstrategy.redis.CacheExpiredListener;
 import cn.x5456.rs.mongo.cleanstrategy.redis.MongoAfterSaveEventListener;
 import cn.x5456.rs.mongo.cleanstrategy.redis.RedisCacheInfo;
@@ -33,7 +34,7 @@ import java.util.Set;
 @ConditionalOnProperty(prefix = "x5456.rs.clean", name = "strategy", havingValue = "redis", matchIfMissing = true)
 @EnableRedisRepositories(value = "cn.x5456.rs.mongo.cleanstrategy.redis", enableKeyspaceEvents = RedisKeyValueAdapter.EnableKeyspaceEvents.ON_STARTUP)
 @AutoConfigureAfter({RsMongoAutoConfiguration.class, RedisAutoConfiguration.class})
-public class RedisCleanStrategyAutoConfiguration {
+public class RedisCleanStrategyAutoConfiguration implements CleanUnUploadedTempStrategy {
 
     public RedisCleanStrategyAutoConfiguration() {
         log.info("启用【redis 清理】策略~");
@@ -72,7 +73,7 @@ public class RedisCleanStrategyAutoConfiguration {
             long now = System.currentTimeMillis();
             long prevMin = this.roundDownMinute(now);
 
-            log.info("Cleaning up caches expiring at " + new Date(prevMin));
+            log.debug("Cleaning up caches expiring at " + new Date(prevMin));
 
             String expirationKey = this.getExpirationKey(prevMin);
             Set<String> sessionsToExpire = this.redis.boundSetOps(expirationKey).members();
