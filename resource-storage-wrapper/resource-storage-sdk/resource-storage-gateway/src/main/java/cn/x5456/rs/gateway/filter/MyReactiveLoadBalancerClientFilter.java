@@ -1,8 +1,8 @@
 package cn.x5456.rs.gateway.filter;
 
+import cn.x5456.infrastructure.util.IpUtil;
 import cn.x5456.rs.gateway.route.MyRequest;
 import cn.x5456.rs.gateway.route.MyRoundRobinLoadBalancer;
-import cn.x5456.rs.gateway.util.IpUtil;
 import org.springframework.cloud.client.ServiceInstance;
 import org.springframework.cloud.client.loadbalancer.LoadBalancerUriTools;
 import org.springframework.cloud.client.loadbalancer.reactive.Request;

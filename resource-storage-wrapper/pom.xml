@@ -21,4 +21,27 @@
         <maven.compiler.target>8</maven.compiler.target>
     </properties>
 
+    <profiles>
+        <profile>
+            <id>normal</id>
+            <properties>
+                <profile.active>normal</profile.active>
+            </properties>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+        </profile>
+        <profile>
+            <id>eureka</id>
+            <properties>
+                <profile.active>eureka</profile.active>
+            </properties>
+        </profile>
+        <profile>
+            <id>nacos</id>
+            <properties>
+                <profile.active>nacos</profile.active>
+            </properties>
+        </profile>
+    </profiles>
 </project>
