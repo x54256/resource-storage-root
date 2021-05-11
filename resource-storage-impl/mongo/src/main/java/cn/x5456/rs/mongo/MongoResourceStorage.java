@@ -627,6 +627,17 @@ public class MongoResourceStorage implements IResourceStorage {
         return this.getResourceInfo(path).map(FsResourceInfo::getFileName);
     }
 
+    /**
+     * 通过path获取文件的 hash
+     *
+     * @param path 服务上存储的标识
+     * @return 文件 hash
+     */
+    @Override
+    public Mono<String> getFileHashByPath(String path) {
+        return this.getResourceInfo(path).map(FsResourceInfo::getFileHash);
+    }
+
     @Override
     public BigFileUploader getBigFileUploader() {
         return INSTANCE;

@@ -86,6 +86,14 @@ public interface IResourceStorage {
      */
     Mono<String> getFileName(String path);
 
+    /**
+     * 通过path获取文件的 hash
+     *
+     * @param path 服务上存储的标识
+     * @return 文件 hash
+     */
+    Mono<String> getFileHashByPath(String path);
+
     // ============================== 分片上传大文件异步 api
 
 

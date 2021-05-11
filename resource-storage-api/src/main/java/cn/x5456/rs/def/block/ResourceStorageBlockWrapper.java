@@ -116,6 +116,17 @@ public class ResourceStorageBlockWrapper implements IBlockResourceStorage {
         return resourceStorage.getFileName(path).block();
     }
 
+    /**
+     * 通过path获取文件的 hash
+     *
+     * @param path 服务上存储的标识
+     * @return 文件 hash
+     */
+    @Override
+    public String getFileHashByPath(String path) {
+        return resourceStorage.getFileHashByPath(path).block();
+    }
+
     public BlockBigFileUploader getBigFileUploader() {
         return new BlockBigFileUploaderImpl(resourceStorage.getBigFileUploader());
     }

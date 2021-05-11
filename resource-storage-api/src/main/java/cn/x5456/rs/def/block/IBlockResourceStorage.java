@@ -25,5 +25,7 @@ public interface IBlockResourceStorage {
 
     String getFileName(String path);
 
+    String getFileHashByPath(String path);
+
     BlockBigFileUploader getBigFileUploader();
 }
