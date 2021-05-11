@@ -150,7 +150,7 @@ v2 通过 @EnableRedisRepositories 用二级索引实现
 - ~~优化多个"请求"下载 tmp 文件的情况~~
 - 定时删除访问量低的文件，通过 LRU 缓存，自动清理工具可以获取系统的磁盘使用情况，当超过阈值（可以设置）再进行清理
 - 前端页面
-- 优化 getReadyMetadata 方法
+- ~~优化 getReadyMetadata 方法~~
 - 问题：
     ```
     第一个请求在上传 hash 值为 123abc 的文件，此时他在 metadata 表的状态是上传中。

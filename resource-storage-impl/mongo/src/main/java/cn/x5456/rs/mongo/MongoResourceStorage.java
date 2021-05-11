@@ -43,6 +43,8 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
+import reactor.util.retry.Retry;
+import reactor.util.retry.RetryBackoffSpec;
 
 import java.io.File;
 import java.io.IOException;
@@ -52,6 +54,7 @@ import java.nio.channels.OverlappingFileLockException;
 import java.nio.charset.Charset;
 import java.nio.file.*;
 import java.security.MessageDigest;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
@@ -223,7 +226,7 @@ public class MongoResourceStorage implements IResourceStorage {
     private Mono<ResourceInfo> doUploadFile(String endurancePath, String fileName, String path, boolean mv) {
         Flux<DataBuffer> dataBufferFlux = DataBufferUtils.read(new FileSystemResource(endurancePath), dataBufferFactory, DEFAULT_CHUNK_SIZE);
         return this.calcFileHashCode(dataBufferFlux)
-                .flatMap(fileHash -> this.getFileMetadata(fileHash)
+                .flatMap(fileHash -> this.getReadyMetadata(fileHash)
                         .switchIfEmpty(
                                 this.doUploadFile(fileHash, dataBufferFlux)
                                         // 如果是新上传的则复制到本地缓存文件夹（开新线程）
@@ -306,7 +309,7 @@ public class MongoResourceStorage implements IResourceStorage {
             // 尝试保存文件元数据信息
             this.insertFileMetadata(fileHash, false)
                     // 如果保存失败，则证明数据库中已经有了 hash 值为 fileHash 的数据，那么取出并返回
-                    .doOnError(DuplicateKeyException.class, ex -> this.getFileMetadata(fileHash).subscribe(sink::success))
+                    .doOnError(DuplicateKeyException.class, ex -> this.getReadyMetadata(fileHash).subscribe(sink::success))
                     // 如果保存成功，则上传文件，完善文件元数据信息
                     .flatMap(m -> gridFsTemplate.store(dataBufferFlux, fileHash)
                             .doOnError(ex -> {
@@ -391,7 +394,6 @@ public class MongoResourceStorage implements IResourceStorage {
                 }
             }
 
-            // TODO: 2021/5/8 改掉，要不无线循环了
             this.getReadyMetadata(fileHash)
                     .subscribe(m -> {
                         // 拼接本地缓存路径，格式：缓存目录/hashcode.official
@@ -415,24 +417,19 @@ public class MongoResourceStorage implements IResourceStorage {
         return LOCAL_TEMP_PATH + fileHash + OFFICIAL_SUFFIX;
     }
 
-    // TODO: 2021/4/30 这个方法可以改成 repeatWhenEmpty 多重试几次要是还不行那就抛异常，让他等会
+    // 2021/4/30 这个方法可以改成 repeatWhenEmpty 多重试几次要是还不行那就抛异常，让他等会
     @NotNull
     private Mono<FsFileMetadata> getReadyMetadata(String fileHash) {
-        int randomInt = RandomUtil.randomInt(100, 4000);
-        return Mono.create(sink -> {
-            Disposable disposable = scheduler.schedulePeriodically(() -> {
-                this.getFileMetadata(fileHash)
-                        .switchIfEmpty(Mono.error(new RuntimeException(StrUtil.format("hash 值为「{}」的文件元数据不存在！", fileHash))))
-                        .doOnError(sink::error)
-                        .subscribe(metadata -> {
-                            if (metadata.getUploadProgress().equals(UploadProgress.UPLOAD_COMPLETED)) {
-                                sink.success(metadata);
-                            }
-                        });
-            }, 0, randomInt, TimeUnit.MILLISECONDS);
-            // 当有数据之后停止定时任务
-            sink.onDispose(disposable);
-        });
+        RetryBackoffSpec retryBackoffSpec = Retry.backoff(5, Duration.ofSeconds(1)).maxBackoff(Duration.ofSeconds(2));
+        return this.getFileMetadata(fileHash)
+                .flatMap(metadata -> {
+                    if (Objects.equals(metadata.getUploadProgress(), UploadProgress.UPLOAD_COMPLETED)) {
+                        return Mono.just(metadata);
+                    }
+                    return Mono.error(new RuntimeException("文件上传中，请稍后再试！"));
+                })
+                .retryWhen(retryBackoffSpec)
+                .onErrorResume((ex) -> Mono.error(ex.getCause()));
     }
 
     @NotNull
@@ -693,7 +690,7 @@ public class MongoResourceStorage implements IResourceStorage {
          */
         @Override
         public Mono<ResourceInfo> secondPass(String fileHash, String fileName, String path) {
-            return MongoResourceStorage.this.getFileMetadata(fileHash)
+            return MongoResourceStorage.this.getReadyMetadata(fileHash)
                     .flatMap(m -> MongoResourceStorage.this.insertResource(m, fileName, path));
         }
 
