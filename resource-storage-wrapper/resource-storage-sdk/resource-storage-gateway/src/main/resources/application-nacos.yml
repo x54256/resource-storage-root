@@ -6,6 +6,7 @@ spring:
     gateway:
       routes:
         - id: rs-service
+#          uri: lb://服务名
           uri: http://127.0.0.1:8080
           predicates:
             - Path=/rest/rs/**
