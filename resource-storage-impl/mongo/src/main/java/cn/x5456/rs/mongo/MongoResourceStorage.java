@@ -7,7 +7,6 @@ import cn.hutool.core.io.file.FileMode;
 import cn.hutool.core.lang.Pair;
 import cn.hutool.core.util.HexUtil;
 import cn.hutool.core.util.IdUtil;
-import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.crypto.SecureUtil;
 import cn.hutool.crypto.digest.DigestAlgorithm;
@@ -18,7 +17,6 @@ import cn.x5456.rs.entity.ResourceInfo;
 import cn.x5456.rs.mongo.document.FsFileMetadata;
 import cn.x5456.rs.mongo.document.FsFileTemp;
 import cn.x5456.rs.mongo.document.FsResourceInfo;
-import com.google.common.annotations.Beta;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.Lists;
@@ -52,7 +50,10 @@ import java.io.RandomAccessFile;
 import java.nio.channels.FileLock;
 import java.nio.channels.OverlappingFileLockException;
 import java.nio.charset.Charset;
-import java.nio.file.*;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
 import java.security.MessageDigest;
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -72,9 +73,6 @@ import static cn.x5456.rs.constant.DataBufferConstant.DEFAULT_CHUNK_SIZE;
  * @date 2021/04/26 09:20
  */
 @Slf4j
-//@Component
-// 配合 @ConditionalOnClass(Mongo.class)
-@SuppressWarnings("UnstableApiUsage")
 public class MongoResourceStorage implements IResourceStorage {
 
     /**
@@ -365,19 +363,6 @@ public class MongoResourceStorage implements IResourceStorage {
                         return true;
                     });
                 });
-    }
-
-    @Deprecated
-    private boolean createSymbolicLink(String sourceFile, String linkFilePath) {
-        try {
-            Files.createSymbolicLink(FileSystems.getDefault().getPath(linkFilePath), FileSystems.getDefault().getPath(sourceFile));
-            if (FileUtil.exist(linkFilePath)) {
-                return true;
-            }
-        } catch (IOException e) {
-            log.error("异常为：", e);
-        }
-        return false;
     }
 
     @NotNull
@@ -788,49 +773,6 @@ public class MongoResourceStorage implements IResourceStorage {
             fsFileTemp.setUploadProgress(UploadProgress.UPLOADING);
             fsFileTemp.setCreatTime(LocalDateTime.now());
             return mongoTemplate.insert(fsFileTemp);
-        }
-
-        // 方案一：布隆过滤器 + 小延时
-        // 如果两个线程同时调用这个方法保存相同的数据，那么会同时插入两条数据（具体原因暂不清楚）同时打破唯一索引约束，即删掉唯一索引。
-        // 如果集合已经包含了违反索引的唯一约束的数据，MongoDB不能在指定的索引字段上创建一个唯一索引。 —— 官方文档
-        // 2021/4/29 所以在这里随机等待一段时间，降低出现这种情况的概率（目前概率还是很高）。当然不是万全之策，有好的想法可以 fix me
-        @Beta
-        @Deprecated
-        private Mono<FsFileTemp> saveChunkTempInfo(String fileHash, int chunk) throws DuplicateKeyException {
-
-            /*
-            Beta（不稳定）
-
-            1. 布隆过滤器过滤每个实例多个相同的上传请求
-            2. 随机延迟解决集群时多个相同的上传请求
-            3. todo 配合 hash 环算法，将相同 hash 的转发到相同的服务器，降低不同服务器相同上传请求造成的问题
-             */
-
-            // 通过布隆过滤器来降低单实例时出现问题的几率
-            String key = fileHash + "_" + chunk;
-            if (bloomFilter.mightContain(key)) {
-                log.info("布隆过滤器过滤的 key 重复：「{}」", key);
-                // 2021/4/29 怎样不用抛出异常的这种方式进行流的转变
-                return Mono.error(new DuplicateKeyException("测试键重复"));
-            }
-
-            // 否则将当前 key 添加进去
-            bloomFilter.put(key);
-            return Mono.create(sink -> {
-                int randomInt = RandomUtil.randomInt(0, 400);
-                Disposable disposable = scheduler.schedule(() -> {
-                    // 尝试添加一条记录
-                    FsFileTemp fsFileTemp = new FsFileTemp();
-                    fsFileTemp.setFileHash(fileHash);
-                    fsFileTemp.setChunk(chunk);
-                    fsFileTemp.setUploadProgress(UploadProgress.UPLOADING);
-                    mongoTemplate.save(fsFileTemp)
-                            .doOnError(sink::error)
-                            .subscribe(sink::success);
-
-                }, randomInt, TimeUnit.MILLISECONDS);
-                sink.onDispose(disposable);
-            });
         }
 
         /**

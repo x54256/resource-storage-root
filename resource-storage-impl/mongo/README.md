@@ -141,7 +141,7 @@ v2 通过 @EnableRedisRepositories 用二级索引实现
 - ~~mongo 那些注解好不好使 {@link com.mongodb.lang.NonNull} -> 不好使~~
 - ~~布隆过滤器线程安全问题 -> 自己学习下 ConcurrentHashMap 封装一下~~   -> 做不到
 - 你觉得清理策略自动启用好还是指定好，如果自动启用，有什么办法调整那两种策略的优先级吗，因为我只想启用一个
-- 作为 jar 包引入，提供 rest api（包括 swagger） 和钩子（hook）
+- 作为 jar 包引入，提供 rest api（包括 swagger，greatwall 那个是咋实现的） 和钩子（hook）
     1. 文件服务独立部署，通过网关转发
     2. 通过 jar 包引入文件服务，最好提供 webflux api
 - 分布式情况下，结合网关使用
