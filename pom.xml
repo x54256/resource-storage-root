@@ -28,13 +28,13 @@
         <maven.compiler.target>8</maven.compiler.target>
         <xdata.version>1.2.1-SNAPSHOT</xdata.version>
         <spring-cloud.version>Hoxton.SR8</spring-cloud.version>
+        <spring-cloud-alibaba.version>2.2.3.RELEASE</spring-cloud-alibaba.version>
         <hutool.version>5.5.2</hutool.version>
         <jetbrains.annotations.version>1.7.0</jetbrains.annotations.version>
         <swagger.version>3.0.0</swagger.version>
         <swagger.annotations.version>1.5.20</swagger.annotations.version>
         <oshi.version>5.6.1</oshi.version>
         <jna.version>5.5.0</jna.version>
-        <nacos.version>2.2.2.RELEASE</nacos.version>
     </properties>
 
     <dependencyManagement>
@@ -72,6 +72,13 @@
                 <scope>import</scope>
             </dependency>
             <dependency>
+                <groupId>com.alibaba.cloud</groupId>
+                <artifactId>spring-cloud-alibaba-dependencies</artifactId>
+                <version>${spring-cloud-alibaba.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
                 <groupId>cn.hutool</groupId>
                 <artifactId>hutool-all</artifactId>
                 <version>${hutool.version}</version>
@@ -95,16 +102,6 @@
                 <groupId>com.github.oshi</groupId>
                 <artifactId>oshi-core</artifactId>
                 <version>${oshi.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.alibaba.cloud</groupId>
-                <artifactId>spring-cloud-starter-alibaba-nacos-config</artifactId>
-                <version>${nacos.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.alibaba.cloud</groupId>
-                <artifactId>spring-cloud-starter-alibaba-nacos-discovery</artifactId>
-                <version>${nacos.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

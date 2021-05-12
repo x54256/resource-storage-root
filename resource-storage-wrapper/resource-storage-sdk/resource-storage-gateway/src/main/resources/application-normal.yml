@@ -10,6 +10,3 @@ spring:
           predicates:
             - Path=/rest/rs/**
           filters:
-eureka:
-  client:
-    enabled: false

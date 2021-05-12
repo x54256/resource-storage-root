@@ -26,41 +26,57 @@
             <id>normal</id>
             <properties>
                 <profile.active>normal</profile.active>
-                <nacos.config.enabled>false</nacos.config.enabled>
-                <nacos.discovery.enabled>false</nacos.discovery.enabled>
-                <nacos.host.port>127.0.0.1:8848</nacos.host.port>
-                <nacos.namespace>rs</nacos.namespace>
-                <nacos.file_extension>yaml</nacos.file_extension>
-                <nacos.file_name>application-nacos</nacos.file_name>
             </properties>
             <activation>
                 <activeByDefault>true</activeByDefault>
             </activation>
         </profile>
         <profile>
-            <id>eureka</id>
-            <properties>
-                <profile.active>eureka</profile.active>
-                <nacos.config.enabled>false</nacos.config.enabled>
-                <nacos.discovery.enabled>false</nacos.discovery.enabled>
-                <nacos.host.port>127.0.0.1:8848</nacos.host.port>
-                <nacos.namespace>rs</nacos.namespace>
-                <nacos.file_extension>yaml</nacos.file_extension>
-                <nacos.file_name>application-nacos</nacos.file_name>
-            </properties>
-        </profile>
-        <profile>
-            <id>nacos</id>
+            <id>nacos-gateway</id>
             <properties>
                 <profile.active>nacos</profile.active>
                 <!-- Nacos 配置服务 -->
-                <nacos.config.enabled>true</nacos.config.enabled>
+                <nacos.config.enabled>false</nacos.config.enabled>
                 <nacos.discovery.enabled>true</nacos.discovery.enabled>
                 <nacos.host.port>127.0.0.1:8848</nacos.host.port>
                 <nacos.namespace>rs</nacos.namespace>
                 <nacos.file_extension>yaml</nacos.file_extension>
-                <nacos.file_name>application-nacos</nacos.file_name>
+                <nacos.file_name>application-gateway-nacos</nacos.file_name>
             </properties>
+            <dependencies>
+                <dependency>
+                    <groupId>com.alibaba.cloud</groupId>
+                    <artifactId>spring-cloud-starter-alibaba-nacos-config</artifactId>
+                </dependency>
+                <dependency>
+                    <groupId>com.alibaba.cloud</groupId>
+                    <artifactId>spring-cloud-starter-alibaba-nacos-discovery</artifactId>
+                </dependency>
+            </dependencies>
         </profile>
+        <profile>
+            <id>nacos-rs</id>
+            <properties>
+                <profile.active>nacos-rs</profile.active>
+                <!-- Nacos 配置服务 -->
+                <nacos.config.enabled>false</nacos.config.enabled>
+                <nacos.discovery.enabled>true</nacos.discovery.enabled>
+                <nacos.host.port>127.0.0.1:8848</nacos.host.port>
+                <nacos.namespace>rs</nacos.namespace>
+                <nacos.file_extension>yaml</nacos.file_extension>
+                <nacos.file_name>application-rs-nacos</nacos.file_name>
+            </properties>
+            <dependencies>
+                <dependency>
+                    <groupId>com.alibaba.cloud</groupId>
+                    <artifactId>spring-cloud-starter-alibaba-nacos-config</artifactId>
+                </dependency>
+                <dependency>
+                    <groupId>com.alibaba.cloud</groupId>
+                    <artifactId>spring-cloud-starter-alibaba-nacos-discovery</artifactId>
+                </dependency>
+            </dependencies>
+        </profile>
+
     </profiles>
 </project>

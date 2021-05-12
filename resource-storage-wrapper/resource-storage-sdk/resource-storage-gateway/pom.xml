@@ -50,16 +50,7 @@
         </dependency>
         <dependency>
             <groupId>org.springframework.cloud</groupId>
-            <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>com.alibaba.cloud</groupId>
-            <artifactId>spring-cloud-starter-alibaba-nacos-discovery</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.alibaba.cloud</groupId>
-            <artifactId>spring-cloud-starter-alibaba-nacos-config</artifactId>
+            <artifactId>spring-cloud-loadbalancer</artifactId>
         </dependency>
     </dependencies>
 
@@ -75,7 +66,7 @@
                 <directory>src/main/resources</directory>
                 <!--先排除所有的配置文件-->
                 <excludes>
-                    <exclude>application*.yml</exclude>
+                    <exclude>*.yml</exclude>
                 </excludes>
             </resource>
             <resource>
@@ -84,6 +75,8 @@
                 <filtering>true</filtering>
                 <includes>
                     <include>bootstrap.yml</include>
+                    <include>bootstrap-${profile.active}.yml</include>
+                    <include>application.yml</include>
                     <include>application-${profile.active}.yml</include>
                 </includes>
             </resource>
