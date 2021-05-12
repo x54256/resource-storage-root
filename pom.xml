@@ -28,6 +28,7 @@
         <maven.compiler.target>8</maven.compiler.target>
         <xdata.version>1.2.1-SNAPSHOT</xdata.version>
         <spring-cloud.version>Hoxton.SR8</spring-cloud.version>
+        <spring-cloud-alibaba.version>2.2.3.RELEASE</spring-cloud-alibaba.version>
         <hutool.version>5.5.2</hutool.version>
         <jetbrains.annotations.version>1.7.0</jetbrains.annotations.version>
         <swagger.version>3.0.0</swagger.version>
@@ -70,6 +71,13 @@
                 <groupId>org.springframework.cloud</groupId>
                 <artifactId>spring-cloud-dependencies</artifactId>
                 <version>${spring-cloud.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.alibaba.cloud</groupId>
+                <artifactId>spring-cloud-alibaba-dependencies</artifactId>
+                <version>${spring-cloud-alibaba.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
