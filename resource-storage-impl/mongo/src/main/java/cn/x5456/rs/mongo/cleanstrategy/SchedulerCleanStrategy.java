@@ -6,7 +6,6 @@ import cn.x5456.rs.mongo.document.FsFileMetadata;
 import cn.x5456.rs.mongo.document.FsFileTemp;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.core.ReactiveMongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
@@ -31,26 +30,25 @@ public class SchedulerCleanStrategy implements CleanUnUploadedTempStrategy {
 
     private ReactiveMongoTemplate mongoTemplate;
 
-    @Autowired
-    public void setScheduler(ReactiveMongoTemplate mongoTemplate, ObjectProvider<Scheduler> schedulerObjectProvider) {
+    private final AtomicLong n = new AtomicLong(1);
+
+    public SchedulerCleanStrategy(ReactiveMongoTemplate mongoTemplate, ObjectProvider<Scheduler> schedulerObjectProvider) {
         this.mongoTemplate = mongoTemplate;
         this.scheduler = schedulerObjectProvider.getIfUnique(Schedulers::elastic);
         this.start();
     }
 
     public void start() {
-        AtomicLong n = new AtomicLong(1);
-        scheduler.schedulePeriodically(() -> {
+        scheduler.schedulePeriodically(this::clean, 1000, MongoSocketTimeoutHolder.getCleanTimeout(), TimeUnit.SECONDS);
+    }
 
-            log.info("正在执行清理操作，第「{}」次。", n.getAndIncrement());
+    public void clean() {
+        log.info("正在执行清理操作，第「{}」次。", n.getAndIncrement());
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime dateTime = now.plusNanos(-1 * MongoSocketTimeoutHolder.getCleanTimeout(TimeUnit.NANOSECONDS));
 
-            LocalDateTime now = LocalDateTime.now();
-            LocalDateTime dateTime = now.plusNanos(-1 * MongoSocketTimeoutHolder.getCleanTimeout(TimeUnit.NANOSECONDS));
-
-            this.cleanFsFileTemp(dateTime);
-            this.cleanFileMetadata(dateTime);
-
-        }, 1000, MongoSocketTimeoutHolder.getCleanTimeout(), TimeUnit.SECONDS);
+        this.cleanFsFileTemp(dateTime);
+        this.cleanFileMetadata(dateTime);
     }
 
     private void cleanFsFileTemp(LocalDateTime dateTime) {

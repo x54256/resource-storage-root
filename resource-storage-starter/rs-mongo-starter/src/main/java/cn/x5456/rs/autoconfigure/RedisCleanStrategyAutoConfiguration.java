@@ -1,22 +1,26 @@
 package cn.x5456.rs.autoconfigure;
 
 import cn.x5456.rs.cleanstrategy.CleanUnUploadedTempStrategy;
+import cn.x5456.rs.mongo.cleanstrategy.SchedulerCleanStrategy;
 import cn.x5456.rs.mongo.cleanstrategy.redis.CacheExpiredListener;
 import cn.x5456.rs.mongo.cleanstrategy.redis.MongoAfterSaveEventListener;
 import cn.x5456.rs.mongo.cleanstrategy.redis.RedisCacheInfo;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.data.mongodb.core.ReactiveMongoTemplate;
 import org.springframework.data.redis.core.RedisKeyValueAdapter;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.repository.configuration.EnableRedisRepositories;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.SchedulingConfigurer;
 import org.springframework.scheduling.config.ScheduledTaskRegistrar;
+import reactor.core.scheduler.Scheduler;
 
 import java.util.Calendar;
 import java.util.Date;
@@ -36,8 +40,9 @@ import java.util.Set;
 @AutoConfigureAfter({RsMongoAutoConfiguration.class, RedisAutoConfiguration.class})
 public class RedisCleanStrategyAutoConfiguration implements CleanUnUploadedTempStrategy {
 
-    public RedisCleanStrategyAutoConfiguration() {
+    public RedisCleanStrategyAutoConfiguration(ReactiveMongoTemplate mongoTemplate, ObjectProvider<Scheduler> schedulerObjectProvider) {
         log.info("启用【redis 清理】策略~");
+        new SchedulerCleanStrategy(mongoTemplate, schedulerObjectProvider).clean();
     }
 
     @Bean

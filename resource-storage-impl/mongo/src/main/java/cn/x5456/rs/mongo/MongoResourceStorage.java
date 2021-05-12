@@ -155,8 +155,6 @@ public class MongoResourceStorage implements IResourceStorage {
         this.eventPublisher = eventPublisher;
         this.scheduler = schedulerObjectProvider.getIfUnique(Schedulers::elastic);
 
-        // TODO: 2021/5/11 每次启动时通过"定时版"清理策略清理一下 metadata 表和 temp 表（可以放到 redis 清理策略中）
-
         // 启动清理本地文件缓存策略
         new CleanLocalFileCache().start();
     }
