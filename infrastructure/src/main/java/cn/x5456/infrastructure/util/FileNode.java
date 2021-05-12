@@ -1,17 +1,14 @@
 package cn.x5456.infrastructure.util;
 
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.*;
 
-//@Data
-@Builder
-//@NoArgsConstructor
 public class FileNode {
+
+    private static final Comparator<FileNode> DEFAULT_COMPARE_STRATEGY =
+            Comparator.<FileNode, Boolean>comparing(x -> !x.getDirectory()).thenComparing(x -> x.getName().toLowerCase());
+
     public Path path;
     public BasicFileAttributes attrs;
     public String name;
@@ -20,10 +17,18 @@ public class FileNode {
 
     public FileNode pre;
 
-    public SortedSet<FileNode> next = new TreeSet<>(Comparator.comparing(FileNode::getDirectory).thenComparing(FileNode::getName));
+    public SortedSet<FileNode> children;
+
+    public FileNode() {
+        this(DEFAULT_COMPARE_STRATEGY);
+    }
+
+    public FileNode(Comparator<FileNode> comparator) {
+        children = new TreeSet<>(comparator);
+    }
 
     public void addChildNode(FileNode fileNode) {
-        next.add(fileNode);
+        children.add(fileNode);
     }
 
     public Path getPath() {
@@ -74,7 +79,25 @@ public class FileNode {
         this.pre = pre;
     }
 
-    public SortedSet<FileNode> getNext() {
-        return next;
+    public SortedSet<FileNode> getChildren() {
+        return children;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        FileNode fileNode = (FileNode) o;
+        return Objects.equals(path, fileNode.path) &&
+                Objects.equals(attrs, fileNode.attrs) &&
+                Objects.equals(name, fileNode.name) &&
+                Objects.equals(isDirectory, fileNode.isDirectory) &&
+                Objects.equals(depth, fileNode.depth) &&
+                Objects.equals(children, fileNode.children);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(path, attrs, name, isDirectory, depth, children);
     }
 }

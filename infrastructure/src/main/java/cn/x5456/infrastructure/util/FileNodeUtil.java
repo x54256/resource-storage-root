@@ -3,7 +3,10 @@ package cn.x5456.infrastructure.util;
 import cn.hutool.core.io.FileUtil;
 
 import java.io.IOException;
-import java.nio.file.*;
+import java.nio.file.FileVisitResult;
+import java.nio.file.FileVisitor;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -18,7 +21,12 @@ public final class FileNodeUtil {
     }
 
     public static FileNode getFileNode(String path) {
-        FileNode root = FileNode.builder().build();
+
+        if (!FileUtil.exist(path)) {
+            throw new RuntimeException("文件路径不存在");
+        }
+
+        FileNode root = new FileNode();
         FileUtil.walkFiles(
                 Paths.get(path),
                 new FileVisitor<Path>() {
@@ -28,13 +36,13 @@ public final class FileNodeUtil {
                     @Override
                     public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
                         // 组装
-                        FileNode newFileNode = FileNode.builder()
-                                .path(dir)
-                                .attrs(attrs)
-                                .pre(this.fileNode)
-                                .name(FileUtil.getName(dir.toFile()))
-                                .depth(depth.getAndIncrement())
-                                .isDirectory(Boolean.TRUE).build();
+                        FileNode newFileNode = new FileNode();
+                        newFileNode.setPath(dir);
+                        newFileNode.setAttrs(attrs);
+                        newFileNode.setPre(this.fileNode);
+                        newFileNode.setName(FileUtil.getName(dir.toFile()));
+                        newFileNode.setDepth(depth.getAndIncrement());
+                        newFileNode.setDirectory(Boolean.TRUE);
                         this.fileNode.addChildNode(newFileNode);
                         this.fileNode = newFileNode;
                         return FileVisitResult.CONTINUE;
@@ -42,15 +50,16 @@ public final class FileNodeUtil {
 
                     @Override
                     public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-                        this.fileNode.addChildNode(FileNode.builder()
-                                .path(file)
-                                .attrs(attrs)
-                                .pre(fileNode)
-                                .name(FileUtil.getName(file.toFile()))
-                                .isDirectory(Boolean.FALSE)
-                                .depth(depth.get())
-                                .build());
-                        // file上传
+                        FileNode fileNode = new FileNode();
+                        fileNode.setPath(file);
+                        fileNode.setAttrs(attrs);
+                        fileNode.setPre(this.fileNode);
+                        fileNode.setName(FileUtil.getName(file.toFile()));
+                        fileNode.setDirectory(Boolean.FALSE);
+                        fileNode.setDepth(depth.get());
+
+                        this.fileNode.addChildNode(fileNode);
+                        // file上set
                         return FileVisitResult.CONTINUE;
                     }
 
@@ -67,10 +76,7 @@ public final class FileNodeUtil {
                     }
                 }
         );
-        return root;
+        return root.getChildren().first();
     }
 
-    public static void main(String[] args) throws IOException {
-        FileNodeUtil.getFileNode("F:\\MyWork\\文件存储\\resource-storage-root");
-    }
 }
