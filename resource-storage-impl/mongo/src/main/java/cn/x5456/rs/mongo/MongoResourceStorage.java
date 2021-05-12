@@ -17,6 +17,7 @@ import cn.x5456.rs.entity.ResourceInfo;
 import cn.x5456.rs.mongo.document.FsFileMetadata;
 import cn.x5456.rs.mongo.document.FsFileTemp;
 import cn.x5456.rs.mongo.document.FsResourceInfo;
+import cn.x5456.rs.mongo.listener.event.AfterMetadataSaveEvent;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.Lists;
@@ -24,6 +25,7 @@ import com.mongodb.client.result.DeleteResult;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.core.io.buffer.DataBufferFactory;
@@ -142,12 +144,18 @@ public class MongoResourceStorage implements IResourceStorage {
 
     private final Scheduler scheduler;
 
+    private final ApplicationEventPublisher eventPublisher;
+
     public MongoResourceStorage(DataBufferFactory dataBufferFactory, ReactiveMongoTemplate mongoTemplate,
-                                ReactiveGridFsTemplate gridFsTemplate, ObjectProvider<Scheduler> schedulerObjectProvider) {
+                                ReactiveGridFsTemplate gridFsTemplate, ApplicationEventPublisher eventPublisher,
+                                ObjectProvider<Scheduler> schedulerObjectProvider) {
         this.dataBufferFactory = dataBufferFactory;
         this.mongoTemplate = mongoTemplate;
         this.gridFsTemplate = gridFsTemplate;
+        this.eventPublisher = eventPublisher;
         this.scheduler = schedulerObjectProvider.getIfUnique(Schedulers::elastic);
+
+        // TODO: 2021/5/11 每次启动时通过"定时版"清理策略清理一下 metadata 表和 temp 表（可以放到 redis 清理策略中）
 
         // 启动清理本地文件缓存策略
         new CleanLocalFileCache().start();
@@ -240,6 +248,10 @@ public class MongoResourceStorage implements IResourceStorage {
                                                         FileUtil.copyFile(endurancePath, officialPath, StandardCopyOption.REPLACE_EXISTING);
                                                     }
                                                     cache.put(officialPath, metadata);
+
+                                                    // 发布事件
+                                                    eventPublisher.publishEvent(new AfterMetadataSaveEvent(metadata, fileName));
+
                                                 } finally {
                                                     // 关闭锁文件和文件锁
                                                     IoUtil.close(lockFile);
@@ -350,15 +362,21 @@ public class MongoResourceStorage implements IResourceStorage {
                 .switchIfEmpty(Mono.error(new RuntimeException(StrUtil.format("输入的 path：「{}」不正确！", path))))
                 .flatMap(r -> {
                     String fileHash = r.getFileHash();
-                    return this.download(fileHash).map(srcPath -> {
+                    return this.downloadFileByFileHash(fileHash).map(srcPath -> {
                         FileUtil.copyFile(srcPath, localFilePath, StandardCopyOption.REPLACE_EXISTING);
                         return true;
                     });
                 });
     }
 
-    @NotNull
-    private Mono<String> download(String fileHash) {
+    /**
+     * 根据文件 hash 从文件服务中获取文件
+     *
+     * @param fileHash 文件 hash
+     * @return 文件在本地的缓存路径
+     */
+    @Override
+    public Mono<String> downloadFileByFileHash(String fileHash) {
         return Mono.create(sink -> {
             // 先从缓存中获取，节省一次查询
             FsFileMetadata metadata = cache.getIfPresent(fileHash);
@@ -406,7 +424,8 @@ public class MongoResourceStorage implements IResourceStorage {
                     return Mono.error(new RuntimeException("文件上传中，请稍后再试！"));
                 })
                 .retryWhen(retryBackoffSpec)
-                .onErrorResume((ex) -> Mono.error(ex.getCause()));
+                .onErrorResume((ex) -> Mono.error(ex.getCause()))
+                .switchIfEmpty(Mono.error(new RuntimeException("传入的文件 hash 在服务器中不存在~")));
     }
 
     @NotNull
@@ -575,7 +594,7 @@ public class MongoResourceStorage implements IResourceStorage {
                     String fileHash = r.getFileHash();
                     String fileName = r.getFileName();
 
-                    return this.download(fileHash).map(localFilePath -> {
+                    return this.downloadFileByFileHash(fileHash).map(localFilePath -> {
                         Flux<DataBuffer> read = DataBufferUtils.read(new FileSystemResource(localFilePath), dataBufferFactory, DEFAULT_CHUNK_SIZE);
                         return new Pair<>(fileName, read);
                     });
@@ -600,7 +619,7 @@ public class MongoResourceStorage implements IResourceStorage {
                 .flatMap(r -> {
                     String fileHash = r.getFileHash();
                     String fileName = r.getFileName();
-                    return this.download(fileHash).map(localFilePath -> new Pair<>(fileName, localFilePath));
+                    return this.downloadFileByFileHash(fileHash).map(localFilePath -> new Pair<>(fileName, localFilePath));
                 });
     }
 
@@ -821,15 +840,17 @@ public class MongoResourceStorage implements IResourceStorage {
                                             metadata.setUploadProgress(UploadProgress.UPLOAD_COMPLETED);
                                             return mongoTemplate.save(metadata);
                                         })
-                                        // 在 fs.resource 添加引用
-                                        .flatMap(metadata -> MongoResourceStorage.this.insertResource(metadata, fileName, path))
                                         // 合并成功
-                                        .doOnSuccess(f -> {
+                                        .doOnSuccess(metadata -> {
                                             // 删除缓存表数据
                                             this.cleanTemp(fileHash).subscribe();
                                             // 持久化到正式路径
                                             this.endurance(fileHash).subscribe();
-                                        });
+                                            // 发布事件
+                                            eventPublisher.publishEvent(new AfterMetadataSaveEvent(metadata, fileName));
+                                        })
+                                        // 在 fs.resource 添加引用
+                                        .flatMap(metadata -> MongoResourceStorage.this.insertResource(metadata, fileName, path));
                             }
                     );
         }

@@ -35,6 +35,8 @@
         <oshi.version>5.6.1</oshi.version>
         <jna.version>5.5.0</jna.version>
         <nacos.version>2.2.2.RELEASE</nacos.version>
+        <compress.version>1.18</compress.version>
+        <xz.version>1.8</xz.version>
     </properties>
 
     <dependencyManagement>
@@ -105,6 +107,16 @@
                 <groupId>com.alibaba.cloud</groupId>
                 <artifactId>spring-cloud-starter-alibaba-nacos-discovery</artifactId>
                 <version>${nacos.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-compress</artifactId>
+                <version>${compress.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.tukaani</groupId>
+                <artifactId>xz</artifactId>
+                <version>${xz.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

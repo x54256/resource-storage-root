@@ -5,12 +5,14 @@ import cn.x5456.rs.def.block.IBlockResourceStorage;
 import cn.x5456.rs.def.block.ResourceStorageBlockWrapper;
 import cn.x5456.rs.mongo.MongoResourceStorage;
 import cn.x5456.rs.mongo.cleanstrategy.MongoSocketTimeoutHolder;
+import cn.x5456.rs.mongo.listener.AfterMetadataSaveEventListener;
 import com.mongodb.reactivestreams.client.MongoClient;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.data.mongo.MongoReactiveDataAutoConfiguration;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.buffer.DataBufferFactory;
@@ -31,8 +33,9 @@ public class RsMongoAutoConfiguration {
 
     @Bean
     public IResourceStorage mongoResourceStorage(DataBufferFactory dataBufferFactory, ReactiveMongoTemplate mongoTemplate,
-                                                 ReactiveGridFsTemplate gridFsTemplate, ObjectProvider<Scheduler> schedulerObjectProvider) {
-        return new MongoResourceStorage(dataBufferFactory, mongoTemplate, gridFsTemplate, schedulerObjectProvider);
+                                                 ReactiveGridFsTemplate gridFsTemplate, ApplicationEventPublisher eventPublisher,
+                                                 ObjectProvider<Scheduler> schedulerObjectProvider) {
+        return new MongoResourceStorage(dataBufferFactory, mongoTemplate, gridFsTemplate, eventPublisher, schedulerObjectProvider);
     }
 
     @Bean
@@ -43,6 +46,12 @@ public class RsMongoAutoConfiguration {
     @Bean
     public MongoSocketTimeoutHolder mongoSocketTimeoutHolder() {
         return new MongoSocketTimeoutHolder();
+    }
+
+
+    @Bean
+    public AfterMetadataSaveEventListener afterMetadataSaveEventListener(ReactiveMongoTemplate mongoTemplate, MongoResourceStorage mongoResourceStorage) {
+        return new AfterMetadataSaveEventListener(mongoTemplate, mongoResourceStorage);
     }
 
 }

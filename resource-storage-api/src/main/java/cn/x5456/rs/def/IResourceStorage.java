@@ -71,6 +71,14 @@ public interface IResourceStorage {
     Mono<Pair<String, String>> downloadFile(String path);
 
     /**
+     * 根据文件 hash 从文件服务中获取文件
+     *
+     * @param fileHash 文件 hash
+     * @return 文件在本地的缓存路径
+     */
+    Mono<String> downloadFileByFileHash(String fileHash);
+
+    /**
      * 删除文件服务上的文件（引用计数）
      *
      * @param path 服务上存储的标识

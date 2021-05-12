@@ -15,6 +15,7 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.core.io.buffer.DataBufferFactory;
@@ -52,10 +53,10 @@ public class MongoResourceStorageTest {
     private DataBufferFactory dataBufferFactory;
 
     @Autowired
-    public void init(DataBufferFactory dataBufferFactory, ReactiveMongoTemplate mongoTemplate,
-                                    ReactiveGridFsTemplate gridFsTemplate, ObjectProvider<Scheduler> schedulerObjectProvider) {
+    public void init(DataBufferFactory dataBufferFactory, ReactiveMongoTemplate mongoTemplate, ReactiveGridFsTemplate gridFsTemplate,
+                     ApplicationEventPublisher eventPublisher, ObjectProvider<Scheduler> schedulerObjectProvider) {
         this.mongoResourceStorage =
-                new MongoResourceStorage(dataBufferFactory, mongoTemplate, gridFsTemplate, schedulerObjectProvider);
+                new MongoResourceStorage(dataBufferFactory, mongoTemplate, gridFsTemplate, eventPublisher, schedulerObjectProvider);
         this.mongoTemplate = mongoTemplate;
         this.bigFileUploader = mongoResourceStorage.getBigFileUploader();
         this.dataBufferFactory = dataBufferFactory;
