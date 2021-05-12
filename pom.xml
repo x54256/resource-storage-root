@@ -35,7 +35,6 @@
         <swagger.annotations.version>1.5.20</swagger.annotations.version>
         <oshi.version>5.6.1</oshi.version>
         <jna.version>5.5.0</jna.version>
-        <nacos.version>2.2.2.RELEASE</nacos.version>
         <compress.version>1.18</compress.version>
         <xz.version>1.8</xz.version>
     </properties>
@@ -105,16 +104,6 @@
                 <groupId>com.github.oshi</groupId>
                 <artifactId>oshi-core</artifactId>
                 <version>${oshi.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.alibaba.cloud</groupId>
-                <artifactId>spring-cloud-starter-alibaba-nacos-config</artifactId>
-                <version>${nacos.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.alibaba.cloud</groupId>
-                <artifactId>spring-cloud-starter-alibaba-nacos-discovery</artifactId>
-                <version>${nacos.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.commons</groupId>
