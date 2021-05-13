@@ -11,7 +11,6 @@ import cn.hutool.core.util.StrUtil;
 import cn.hutool.crypto.SecureUtil;
 import cn.hutool.crypto.digest.DigestAlgorithm;
 import cn.x5456.rs.attachment.AttachmentProcessContainer;
-import cn.x5456.rs.constant.AttachmentConstant;
 import cn.x5456.rs.def.BigFileUploader;
 import cn.x5456.rs.def.IResourceStorage;
 import cn.x5456.rs.def.UploadProgress;
@@ -708,11 +707,17 @@ public class MongoResourceStorage implements IResourceStorage {
                     if (o != null) {
                         return Mono.just((T) o);
                     }
+
                     // 解析
-                    Object fileNode = AttachmentProcessContainer.getProcess(AttachmentConstant.FILE_NODE).process(fsFileMetadata);
+                    if (AttachmentProcessContainer.getProcess(key) == null) {
+                        return Mono.error(new RuntimeException("未找到传入 key 的处理器，请添加！"));
+                    }
+                    Object fileNode = AttachmentProcessContainer.getProcess(key).process(fsFileMetadata);
                     if (fileNode != null) {
                         return Mono.just((T) fileNode);
                     }
+
+                    // 否则可能是解析出来的就是 null 直接返回 Mono.empty()
                     return Mono.empty();
                 });
     }
