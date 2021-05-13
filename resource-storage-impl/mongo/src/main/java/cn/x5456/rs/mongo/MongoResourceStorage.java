@@ -7,16 +7,21 @@ import cn.hutool.core.io.file.FileMode;
 import cn.hutool.core.lang.Pair;
 import cn.hutool.core.util.HexUtil;
 import cn.hutool.core.util.IdUtil;
+import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.crypto.SecureUtil;
 import cn.hutool.crypto.digest.DigestAlgorithm;
+import cn.x5456.rs.attachment.AttachmentProcessContainer;
+import cn.x5456.rs.constant.AttachmentConstant;
 import cn.x5456.rs.def.BigFileUploader;
 import cn.x5456.rs.def.IResourceStorage;
 import cn.x5456.rs.def.UploadProgress;
 import cn.x5456.rs.entity.ResourceInfo;
+import cn.x5456.rs.mongo.attachment.FileNodeAttachmentProcess;
 import cn.x5456.rs.mongo.document.FsFileMetadata;
 import cn.x5456.rs.mongo.document.FsFileTemp;
 import cn.x5456.rs.mongo.document.FsResourceInfo;
+import cn.x5456.rs.mongo.dto.ZipFileNode;
 import cn.x5456.rs.mongo.listener.event.AfterMetadataSaveEvent;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
@@ -62,6 +67,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiFunction;
 import java.util.stream.Collectors;
+import java.util.zip.ZipFile;
 
 import static cn.x5456.rs.constant.DataBufferConstant.DEFAULT_CHUNK_SIZE;
 
@@ -686,15 +692,19 @@ public class MongoResourceStorage implements IResourceStorage {
         3. add 到 metadata 的 attachment 中，save
         4. return
          */
-
-
         // 获取文件信息
         return this.getResourceInfo(path)
                 .flatMap(fsResourceInfo -> this.getReadyMetadata(fsResourceInfo.getFileHash()))
                 .flatMap(fsFileMetadata -> {
+                    // 判断是否已经存在
                     Object o = fsFileMetadata.getAttachments().get(key);
                     if (o != null) {
                         return Mono.just((T) o);
+                    }
+                    // 解析
+                    Object fileNode = AttachmentProcessContainer.getProcess(AttachmentConstant.FILE_NODE).process(fsFileMetadata);
+                    if (fileNode != null) {
+                        return Mono.just((T) fileNode);
                     }
                     return Mono.empty();
                 });

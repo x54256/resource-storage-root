@@ -41,7 +41,6 @@ import static cn.x5456.rs.constant.DataBufferConstant.DEFAULT_CHUNK_SIZE;
 @Slf4j
 @SpringBootTest
 @RunWith(SpringRunner.class)
-@SpringBootApplication
 public class MongoResourceStorageTest {
 
     private MongoResourceStorage mongoResourceStorage;

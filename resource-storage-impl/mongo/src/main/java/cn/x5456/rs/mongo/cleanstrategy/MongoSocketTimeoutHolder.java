@@ -7,6 +7,7 @@ import com.mongodb.reactivestreams.client.MongoClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.ReactiveMongoDatabaseFactory;
 import org.springframework.data.mongodb.core.ReactiveMongoTemplate;
+import org.springframework.stereotype.Component;
 
 import java.util.concurrent.TimeUnit;
 
@@ -16,6 +17,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
  * @author yujx
  * @date 2021/04/30 10:27
  */
+@Component
 public final class MongoSocketTimeoutHolder {
 
     /**

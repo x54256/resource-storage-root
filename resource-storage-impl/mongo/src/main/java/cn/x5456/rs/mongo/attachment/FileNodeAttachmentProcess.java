@@ -1,4 +1,4 @@
-package cn.x5456.rs.mongo.listener;
+package cn.x5456.rs.mongo.attachment;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.io.FileUtil;
@@ -7,61 +7,50 @@ import cn.x5456.infrastructure.util.CompressUtils;
 import cn.x5456.infrastructure.util.FileNodeDTO;
 import cn.x5456.infrastructure.util.FileNodeUtil;
 import cn.x5456.infrastructure.util.FileTypeGuessUtil;
-import cn.x5456.rs.mongo.dto.ZipFileNode;
+import cn.x5456.rs.attachment.AttachmentProcess;
+import cn.x5456.rs.attachment.AttachmentProcessContainer;
 import cn.x5456.rs.constant.AttachmentConstant;
+import cn.x5456.rs.entity.FileMetadata;
 import cn.x5456.rs.mongo.MongoResourceStorage;
-import cn.x5456.rs.mongo.document.FsFileMetadata;
-import cn.x5456.rs.mongo.listener.event.AfterMetadataSaveEvent;
+import cn.x5456.rs.mongo.dto.ZipFileNode;
 import com.google.common.collect.ImmutableList;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.compress.archivers.ArchiveStreamFactory;
-import org.springframework.context.ApplicationListener;
-import org.springframework.data.mongodb.core.ReactiveMongoTemplate;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
 
 /**
- * 解析压缩文件的监听器
- *
- * @author yujx
- * @date 2021/05/11 16:07
+ * @author: dengdh@dist.com.cn
+ * @date: 2021/5/13 15:27
+ * @description:
  */
-@Slf4j
 @Component
-public class AfterMetadataSaveEventListener implements ApplicationListener<AfterMetadataSaveEvent> {
+@Slf4j
+public class FileNodeAttachmentProcess implements AttachmentProcess<ZipFileNode> {
 
     private static final List<String> COMPRESS_PACKAGE_TYPE_LIST = ImmutableList.of(
             ArchiveStreamFactory.TAR, ArchiveStreamFactory.ZIP, ArchiveStreamFactory.SEVEN_Z
     );
 
-    // TODO: 2021/5/11 有密码的怎么办
-
-    private final ReactiveMongoTemplate mongoTemplate;
-
     private final MongoResourceStorage mongoResourceStorage;
+    private final MongoTemplate mongoTemplate;
 
-    public AfterMetadataSaveEventListener(ReactiveMongoTemplate mongoTemplate, MongoResourceStorage mongoResourceStorage) {
-        this.mongoTemplate = mongoTemplate;
+    public FileNodeAttachmentProcess(MongoResourceStorage mongoResourceStorage, MongoTemplate mongoTemplate) {
         this.mongoResourceStorage = mongoResourceStorage;
+        this.mongoTemplate = mongoTemplate;
+        AttachmentProcessContainer.addProcess(AttachmentConstant.FILE_NODE, this);
     }
 
     @Override
-    public void onApplicationEvent(AfterMetadataSaveEvent event) {
-        /*
-        0. 下载文件（通过 api）
-        1. 判断文件类型需不需要处理
-        todo 2. 如果需要处理则保存一些（进度）信息
-        4. 解析文件，保存 attachments
-         */
-        String fileName = event.getFileName();
-        FsFileMetadata metadata = event.getSource();
-
+    public ZipFileNode process(FileMetadata metadata) {
         mongoResourceStorage.downloadFileByFileHash(metadata.getFileHash())
                 .subscribe(localFilePath -> {
-                    String fileType = FileTypeGuessUtil.getTypeByPath(localFilePath, fileName);
+                    String fileType = FileTypeGuessUtil.getTypeByPath(localFilePath, FileUtil.getName(localFilePath));
                     metadata.getAttachments().put(AttachmentConstant.FILE_TYPE, fileType);
-                    mongoTemplate.save(metadata).subscribe();
+                    mongoTemplate.save(metadata);
 
                     if (COMPRESS_PACKAGE_TYPE_LIST.contains(fileType)) {
                         String extractPath = CompressUtils.extract(localFilePath);
@@ -76,12 +65,13 @@ public class AfterMetadataSaveEventListener implements ApplicationListener<After
                         BeanUtil.copyProperties(fileNode, zipFileNode);
 
                         metadata.getAttachments().put(AttachmentConstant.FILE_NODE, zipFileNode);
-                        mongoTemplate.save(metadata).subscribe(m -> {
-                            log.info("压缩包文件解析成功！");
-                            // 删除解压出来的压缩包
-                            FileUtil.del(extractPath);
-                        });
+                        mongoTemplate.save(metadata);
+                        log.info("压缩包文件解析成功！");
+                        // 删除解压出来的压缩包
+                        FileUtil.del(extractPath);
                     }
                 });
+
+        return null;
     }
 }

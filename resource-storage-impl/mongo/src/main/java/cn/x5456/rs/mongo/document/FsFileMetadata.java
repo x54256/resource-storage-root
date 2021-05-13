@@ -40,8 +40,8 @@ public class FsFileMetadata implements FileMetadata {
     private String fileHash;
 
     // 推测文件类型，如果没有推测出则设置为 null（不建议使用）
-    @Deprecated
-    private String fileType;
+//    @Deprecated
+//    private String fileType;
 
     // 文件的引用计数，仅供参考 todo cas 更新 https://blog.csdn.net/chinatopno1/article/details/108916905
     private Integer referenceCount;
