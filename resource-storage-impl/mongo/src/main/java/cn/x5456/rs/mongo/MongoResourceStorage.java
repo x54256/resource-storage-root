@@ -220,49 +220,56 @@ public class MongoResourceStorage implements IResourceStorage {
     @NotNull
     private Mono<ResourceInfo> doUploadFile(String endurancePath, String fileName, String path, boolean mv) {
         Flux<DataBuffer> dataBufferFlux = DataBufferUtils.read(new FileSystemResource(endurancePath), dataBufferFactory, DEFAULT_CHUNK_SIZE);
+        // 是否是新上传的标识
+        AtomicBoolean upload = new AtomicBoolean(false);
         return this.calcFileHashCode(dataBufferFlux)
                 .flatMap(fileHash -> this.getReadyMetadata(fileHash)
-                        .switchIfEmpty(
-                                this.doUploadFile(fileHash, dataBufferFlux)
-                                        // 如果是新上传的则复制到本地缓存文件夹（开新线程）
-                                        .doOnSuccess(metadata -> scheduler.schedule(() -> {
-                                            String officialPath = this.getFileOfficialPath(fileHash);
-                                            String lockPath = this.getLockPath(fileHash);
-                                            // 检查 officialPath 是否存在
+                        .switchIfEmpty(this.doUploadFile(fileHash, dataBufferFlux)
+                                // 如果是新上传的则复制到本地缓存文件夹
+                                .doOnSuccess(metadata -> {
+
+                                    // 上传完成后设置为 true
+                                    upload.set(true);
+
+                                    String officialPath = this.getFileOfficialPath(fileHash);
+                                    String lockPath = this.getLockPath(fileHash);
+                                    // 检查 officialPath 是否存在
+                                    if (FileUtil.exist(officialPath)) {
+                                        return;
+                                    }
+
+                                    // 尝试获取锁，
+                                    // 注：这个地方进行了线程切换，从 nio 线程切换到了 elastic 线程，从而导致 mv 和 delete 操作在不同的线程中执行
+                                    // 而且确实这个地方不能在 nio 线程做，因为 mv、cp、发布事件这些是阻塞的，最好不要再 nio 线程执行。
+                                    this.tryLock(lockPath).subscribe(lockFile -> {
+                                        try {
+                                            // 获取到锁，再次检查 officialPath 是否存在，如果不存在再进行文件的下载工作
                                             if (FileUtil.exist(officialPath)) {
                                                 return;
                                             }
+                                            if (mv) {
+                                                FileUtil.move(Paths.get(endurancePath), Paths.get(officialPath), true);
+                                            } else {
+                                                FileUtil.copyFile(endurancePath, officialPath, StandardCopyOption.REPLACE_EXISTING);
+                                            }
+                                            cache.put(officialPath, metadata);
 
-                                            // 尝试获取锁
-                                            this.tryLock(lockPath).subscribe(lockFile -> {
-                                                try {
-                                                    // 获取到锁，再次检查 officialPath 是否存在，如果不存在再进行文件的下载工作
-                                                    if (FileUtil.exist(officialPath)) {
-                                                        return;
-                                                    }
-                                                    if (mv) {
-                                                        FileUtil.move(Paths.get(endurancePath), Paths.get(officialPath), true);
-                                                    } else {
-                                                        FileUtil.copyFile(endurancePath, officialPath, StandardCopyOption.REPLACE_EXISTING);
-                                                    }
-                                                    cache.put(officialPath, metadata);
+                                            // 发布事件
+                                            eventPublisher.publishEvent(new AfterMetadataSaveEvent(metadata, fileName));
 
-                                                    // 发布事件
-                                                    eventPublisher.publishEvent(new AfterMetadataSaveEvent(metadata, fileName));
-
-                                                } finally {
-                                                    // 关闭锁文件和文件锁
-                                                    IoUtil.close(lockFile);
-                                                    // 删除锁文件
-                                                    FileUtil.del(lockPath);
-                                                }
-                                            });
-                                        }))
+                                        } finally {
+                                            // 关闭锁文件和文件锁
+                                            IoUtil.close(lockFile);
+                                            // 删除锁文件
+                                            FileUtil.del(lockPath);
+                                        }
+                                    });
+                                })
                         )
                         .flatMap(m -> this.insertResource(m, fileName, path))
                         // 当文件引用建立成功之后删除缓存文件
                         .doOnTerminate(() -> {
-                            if (mv) {
+                            if (mv && !upload.get()) {
                                 FileUtil.del(endurancePath);
                             }
                         })
@@ -422,8 +429,7 @@ public class MongoResourceStorage implements IResourceStorage {
                     return Mono.error(new RuntimeException("文件上传中，请稍后再试！"));
                 })
                 .retryWhen(retryBackoffSpec)
-                .onErrorResume((ex) -> Mono.error(ex.getCause()))
-                .switchIfEmpty(Mono.error(new RuntimeException("传入的文件 hash 在服务器中不存在~")));
+                .onErrorResume((ex) -> Mono.error(ex.getCause()));
     }
 
     @NotNull
@@ -652,7 +658,9 @@ public class MongoResourceStorage implements IResourceStorage {
      */
     @Override
     public Mono<String> getFileHashByPath(String path) {
-        return this.getResourceInfo(path).map(FsResourceInfo::getFileHash);
+        return this.getResourceInfo(path)
+                .switchIfEmpty(Mono.error(new RuntimeException("传入的文件 hash 在服务器中不存在~")))
+                .map(FsResourceInfo::getFileHash);
     }
 
     @Override
