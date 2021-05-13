@@ -1,6 +1,7 @@
 package cn.x5456.rs.entity;
 
 import cn.x5456.rs.def.UploadProgress;
+import org.jetbrains.annotations.NotNull;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -50,5 +51,6 @@ public interface FileMetadata {
     /**
      * @return 获取附件
      */
+    @NotNull
     Map<String, Object> getAttachments();
 }

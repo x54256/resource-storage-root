@@ -454,7 +454,7 @@ public class MongoResourceStorage implements IResourceStorage {
     }
 
     /**
-     * 注：调用这个方法不能使用 nio 线程
+     * 注：调用这个方法不能使用 nio 线程（无所谓了，tryLock 方法会进行线程的切换的）
      */
     @NotNull
     private Mono<String> merge(FsFileMetadata metadata, String tempPath, String officialPath, String lockPath,
