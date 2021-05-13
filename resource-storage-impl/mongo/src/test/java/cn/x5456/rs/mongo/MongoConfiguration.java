@@ -4,6 +4,7 @@ import cn.x5456.rs.def.IResourceStorage;
 import cn.x5456.rs.def.block.IBlockResourceStorage;
 import cn.x5456.rs.def.block.ResourceStorageBlockWrapper;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -13,6 +14,7 @@ import org.springframework.data.mongodb.gridfs.ReactiveGridFsTemplate;
 import reactor.core.scheduler.Scheduler;
 
 @Configuration
+@EnableAutoConfiguration
 public class MongoConfiguration {
 
     @Bean

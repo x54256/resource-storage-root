@@ -57,7 +57,7 @@ public class AfterMetadataSaveEventListener implements ApplicationListener<After
         String fileName = event.getFileName();
         FsFileMetadata metadata = event.getSource();
 
-        mongoResourceStorage.downloadFileByFileHash(metadata.getFileHash())
+        /*mongoResourceStorage.downloadFileByFileHash(metadata.getFileHash())
                 .subscribe(localFilePath -> {
                     String fileType = FileTypeGuessUtil.getTypeByPath(localFilePath, fileName);
                     metadata.getAttachments().put(AttachmentConstant.FILE_TYPE, fileType);
@@ -82,6 +82,6 @@ public class AfterMetadataSaveEventListener implements ApplicationListener<After
                             FileUtil.del(extractPath);
                         });
                     }
-                });
+                });*/
     }
 }
