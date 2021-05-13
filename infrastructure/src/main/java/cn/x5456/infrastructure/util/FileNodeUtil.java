@@ -9,6 +9,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 
 /**
  * @author: dengdh@dist.com.cn
@@ -20,7 +21,7 @@ public final class FileNodeUtil {
     private FileNodeUtil() {
     }
 
-    public static FileNode getFileNode(String path) {
+    public static FileNode getFileNode(String path, Consumer<FileNode> consumer) {
 
         if (!FileUtil.exist(path)) {
             throw new RuntimeException("文件路径不存在");
@@ -35,6 +36,9 @@ public final class FileNodeUtil {
 
                     @Override
                     public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
+                        if ("_MACOSX".equals(dir.getFileName())) {
+                            return FileVisitResult.SKIP_SIBLINGS;
+                        }
                         // 组装
                         FileNode newFileNode = new FileNode();
                         newFileNode.setPath(dir);
@@ -59,7 +63,8 @@ public final class FileNodeUtil {
                         fileNode.setDepth(depth.get());
 
                         this.fileNode.addChildNode(fileNode);
-                        // file上set
+                        // file上传
+                        consumer.accept(fileNode);
                         return FileVisitResult.CONTINUE;
                     }
 
