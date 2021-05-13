@@ -684,6 +684,16 @@ public class MongoResourceStorage implements IResourceStorage {
         FileUtil.mkdir(LOCAL_TEMP_PATH);
     }
 
+    /**
+     * 获取附件信息
+     * <p>
+     * 1. 第一次添加 metadata 的时候新开一个线程进行处理获取结果
+     * 2. 第一次调用的时候，检查是否已经存在，如果不存在则处理获取结果再保存
+     *
+     * @param key 附件信息key
+     * @param <T> 需要转换的类型
+     * @return 附件信息
+     */
     @Override
     public <T> Mono<T> getAttachment(String path, String key, Class<T> tClass) {
         /*

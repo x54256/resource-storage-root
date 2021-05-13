@@ -7,10 +7,10 @@ import cn.x5456.infrastructure.util.CompressUtils;
 import cn.x5456.infrastructure.util.FileNodeDTO;
 import cn.x5456.infrastructure.util.FileNodeUtil;
 import cn.x5456.infrastructure.util.FileTypeGuessUtil;
-import cn.x5456.rs.mongo.dto.ZipFileNode;
 import cn.x5456.rs.constant.AttachmentConstant;
-import cn.x5456.rs.mongo.MongoResourceStorage;
+import cn.x5456.rs.def.IResourceStorage;
 import cn.x5456.rs.mongo.document.FsFileMetadata;
+import cn.x5456.rs.mongo.dto.ZipFileNode;
 import cn.x5456.rs.mongo.listener.event.AfterMetadataSaveEvent;
 import com.google.common.collect.ImmutableList;
 import lombok.extern.slf4j.Slf4j;
@@ -39,9 +39,9 @@ public class AfterMetadataSaveEventListener implements ApplicationListener<After
 
     private final ReactiveMongoTemplate mongoTemplate;
 
-    private final MongoResourceStorage mongoResourceStorage;
+    private final IResourceStorage mongoResourceStorage;
 
-    public AfterMetadataSaveEventListener(ReactiveMongoTemplate mongoTemplate, MongoResourceStorage mongoResourceStorage) {
+    public AfterMetadataSaveEventListener(ReactiveMongoTemplate mongoTemplate, IResourceStorage mongoResourceStorage) {
         this.mongoTemplate = mongoTemplate;
         this.mongoResourceStorage = mongoResourceStorage;
     }

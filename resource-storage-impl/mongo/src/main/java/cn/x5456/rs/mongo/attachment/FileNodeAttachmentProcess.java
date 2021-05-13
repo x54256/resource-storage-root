@@ -10,13 +10,12 @@ import cn.x5456.infrastructure.util.FileTypeGuessUtil;
 import cn.x5456.rs.attachment.AttachmentProcess;
 import cn.x5456.rs.attachment.AttachmentProcessContainer;
 import cn.x5456.rs.constant.AttachmentConstant;
+import cn.x5456.rs.def.IResourceStorage;
 import cn.x5456.rs.entity.FileMetadata;
-import cn.x5456.rs.mongo.MongoResourceStorage;
 import cn.x5456.rs.mongo.dto.ZipFileNode;
 import com.google.common.collect.ImmutableList;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.compress.archivers.ArchiveStreamFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.stereotype.Component;
 
@@ -35,10 +34,10 @@ public class FileNodeAttachmentProcess implements AttachmentProcess<ZipFileNode>
             ArchiveStreamFactory.TAR, ArchiveStreamFactory.ZIP, ArchiveStreamFactory.SEVEN_Z
     );
 
-    private final MongoResourceStorage mongoResourceStorage;
+    private final IResourceStorage mongoResourceStorage;
     private final MongoTemplate mongoTemplate;
 
-    public FileNodeAttachmentProcess(MongoResourceStorage mongoResourceStorage, MongoTemplate mongoTemplate) {
+    public FileNodeAttachmentProcess(IResourceStorage mongoResourceStorage, MongoTemplate mongoTemplate) {
         this.mongoResourceStorage = mongoResourceStorage;
         this.mongoTemplate = mongoTemplate;
         AttachmentProcessContainer.addProcess(AttachmentConstant.FILE_NODE, this);
