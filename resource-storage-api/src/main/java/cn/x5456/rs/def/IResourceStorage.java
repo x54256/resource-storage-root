@@ -107,6 +107,15 @@ public interface IResourceStorage {
 
     BigFileUploader getBigFileUploader();
 
+    /**
+     * 获取附件信息
+     *
+     * @param key 附件信息key
+     * @param <T> 需要转换的类型
+     * @return 附件信息
+     */
+    <T> Mono<T> getAttachment(String path, String key, Class<T> tClass);
+
 
     // TODO: 2021/4/25 小文件下载的时候用 0 拷贝 https://www.cnblogs.com/-wenli/p/13380616.html
 }

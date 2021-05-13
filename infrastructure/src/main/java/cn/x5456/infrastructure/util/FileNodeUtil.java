@@ -24,6 +24,17 @@ public final class FileNodeUtil {
     private FileNodeUtil() {
     }
 
+    /**
+     * 递归遍历目录并处理目录下的文件，可以处理目录或文件：
+     * <ul>
+     * <li>非目录则直接调用{@link Consumer}处理</li>
+     * <li>目录则递归调用此方法处理</li>
+     * </ul>
+     *
+     * @param path     文件或目录，文件直接处理
+     * @param consumer 文件处理器，只会处理文件
+     * @return 文件目录的层级结构
+     */
     public static FileNodeDTO getFileNode(String path, Consumer<FileNode> consumer) {
 
         if (!FileUtil.exist(path)) {
@@ -34,12 +45,12 @@ public final class FileNodeUtil {
         FileUtil.walkFiles(
                 Paths.get(path),
                 new FileVisitor<Path>() {
-                    AtomicInteger depth = new AtomicInteger(0);
+                    final AtomicInteger depth = new AtomicInteger(0);
                     FileNode fileNode = root;
 
                     @Override
                     public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
-                        if ("_MACOSX".equals(dir.getFileName())) {
+                        if ("_MACOSX".equals(FileUtil.getName(dir.toFile()))) {
                             return FileVisitResult.SKIP_SIBLINGS;
                         }
                         // 组装

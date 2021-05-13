@@ -676,7 +676,13 @@ public class MongoResourceStorage implements IResourceStorage {
         FileUtil.mkdir(LOCAL_TEMP_PATH);
     }
 
-    // TODO: 2021/4/30 定时删除访问量低的文件，通过 LRU 缓存
+    @Override
+    public <T> Mono<T> getAttachment(String path, String key, Class<T> tClass) {
+        // 获取文件信息
+        return this.getResourceInfo(path)
+                .flatMap(fsResourceInfo -> this.getReadyMetadata(fsResourceInfo.getFileHash()))
+                .map(fsFileMetadata ->  ((T) fsFileMetadata.getAttachments().get(key)));
+    }
 
     class BigFileUploaderImpl implements BigFileUploader {
 
@@ -851,9 +857,12 @@ public class MongoResourceStorage implements IResourceStorage {
                                             // 删除缓存表数据
                                             this.cleanTemp(fileHash).subscribe();
                                             // 持久化到正式路径
-                                            this.endurance(fileHash).subscribe();
-                                            // 发布事件
-                                            eventPublisher.publishEvent(new AfterMetadataSaveEvent(metadata, fileName));
+                                            this.endurance(fileHash)
+                                                    .then(Mono.fromRunnable(() -> {
+                                                        // 发布事件
+                                                        eventPublisher.publishEvent(new AfterMetadataSaveEvent(metadata, fileName));
+                                                    }))
+                                                    .subscribe();
                                         })
                                         // 在 fs.resource 添加引用
                                         .flatMap(metadata -> MongoResourceStorage.this.insertResource(metadata, fileName, path));

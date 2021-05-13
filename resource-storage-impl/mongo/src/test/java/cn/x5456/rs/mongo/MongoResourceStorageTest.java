@@ -4,6 +4,7 @@ import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.lang.Pair;
 import cn.hutool.core.util.IdUtil;
 import cn.hutool.crypto.SecureUtil;
+import cn.x5456.infrastructure.util.FileNodeDTO;
 import cn.x5456.rs.def.BigFileUploader;
 import cn.x5456.rs.entity.ResourceInfo;
 import cn.x5456.rs.mongo.document.FsResourceInfo;
@@ -26,10 +27,12 @@ import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.gridfs.ReactiveGridFsTemplate;
 import org.springframework.test.context.junit4.SpringRunner;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Scheduler;
 
 import java.io.File;
 import java.nio.file.Paths;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 
 import static cn.x5456.rs.constant.DataBufferConstant.DEFAULT_CHUNK_SIZE;
@@ -231,5 +234,10 @@ public class MongoResourceStorageTest {
         this.uploadCompleted();
         mongoResourceStorage.downloadFile(pathBig).subscribe();
         mongoResourceStorage.downloadFile(pathBig).block();
+    }
+
+    @Test
+    public void testGetAttachment() {
+        mongoResourceStorage.getAttachment("609c94cdc8bd92d5fb5f0b3c", "fileNode", FileNodeDTO.class);
     }
 }

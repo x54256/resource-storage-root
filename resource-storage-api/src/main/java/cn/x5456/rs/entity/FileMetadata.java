@@ -4,6 +4,7 @@ import cn.x5456.rs.def.UploadProgress;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 /**
  * @author yujx
@@ -45,4 +46,9 @@ public interface FileMetadata {
      * @return 是否是分片上传
      */
     Boolean getMultipartUpload();
+
+    /**
+     * @return 获取附件
+     */
+    Map<String, Object> getAttachments();
 }
