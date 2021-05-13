@@ -680,6 +680,14 @@ public class MongoResourceStorage implements IResourceStorage {
 
     @Override
     public <T> Mono<T> getAttachment(String path, String key, Class<T> tClass) {
+        /*
+        1. 先查询元数据表，查看是否已经解析过了
+        2. 如果没解析就从 container 获取 process 调用获取结果（把结果强转为 T 类型）
+        3. add 到 metadata 的 attachment 中，save
+        4. return
+         */
+
+
         // 获取文件信息
         return this.getResourceInfo(path)
                 .flatMap(fsResourceInfo -> this.getReadyMetadata(fsResourceInfo.getFileHash()))

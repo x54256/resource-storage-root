@@ -1,4 +1,4 @@
-package cn.x5456.rs.attachment;
+package cn.x5456.rs.mongo.dto;
 
 import lombok.Data;
 

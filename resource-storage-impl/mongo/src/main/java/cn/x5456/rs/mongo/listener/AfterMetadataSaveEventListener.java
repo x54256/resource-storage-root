@@ -7,7 +7,7 @@ import cn.x5456.infrastructure.util.CompressUtils;
 import cn.x5456.infrastructure.util.FileNodeDTO;
 import cn.x5456.infrastructure.util.FileNodeUtil;
 import cn.x5456.infrastructure.util.FileTypeGuessUtil;
-import cn.x5456.rs.attachment.ZipFileNode;
+import cn.x5456.rs.mongo.dto.ZipFileNode;
 import cn.x5456.rs.constant.AttachmentConstant;
 import cn.x5456.rs.mongo.MongoResourceStorage;
 import cn.x5456.rs.mongo.document.FsFileMetadata;
