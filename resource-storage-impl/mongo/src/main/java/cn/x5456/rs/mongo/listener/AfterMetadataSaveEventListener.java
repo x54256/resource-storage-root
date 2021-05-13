@@ -40,7 +40,7 @@ public class AfterMetadataSaveEventListener implements ApplicationListener<After
         0. 下载文件（通过 api）
         1. 判断文件类型需不需要处理
         2. 如果需要处理则保存一些（进度）信息
-        4. 解析文件，保存 fileContentMetadata
+        4. 解析文件，保存 attachments
 
          */
         log.info("监听处理开始======");
@@ -61,7 +61,7 @@ public class AfterMetadataSaveEventListener implements ApplicationListener<After
                             node.getAttachments().put("path", path);
                         });
 
-                        Map<String, Object> map = metadata.getFileContentMetadata();
+                        Map<String, Object> map = metadata.getAttachments();
                         map.put("fileNode", fileNode);
 
                         mongoTemplate.save(metadata).subscribe((x) -> log.info("结束"));
