@@ -10,6 +10,7 @@ import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -52,7 +53,7 @@ public class FsFileMetadata implements FileMetadata {
     private List<FsFilesInfo> filesInfoList;
 
     // 其他元数据信息
-    private Map<String, Object> fileContentMetadata;
+    private Map<String, Object> fileContentMetadata = new HashMap<>();
 
     // 上传进度
     private UploadProgress uploadProgress;

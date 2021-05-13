@@ -1,23 +1,29 @@
 package cn.x5456.infrastructure.util;
 
+import org.springframework.data.annotation.Transient;
+
+import java.io.Serializable;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.*;
 
-public class FileNode {
+public class FileNode implements Serializable {
 
     private static final Comparator<FileNode> DEFAULT_COMPARE_STRATEGY =
             Comparator.<FileNode, Boolean>comparing(x -> !x.getDirectory()).thenComparing(x -> x.getName().toLowerCase());
 
-    public Path path;
-    public BasicFileAttributes attrs;
-    public String name;
-    public Boolean isDirectory;
-    public Integer depth;
+    private Path path;
+    private BasicFileAttributes attrs;
+    private String name;
+    private Boolean isDirectory;
+    private Integer depth;
 
-    public FileNode pre;
+    @Transient
+    private transient FileNode pre;
 
-    public SortedSet<FileNode> children;
+    private SortedSet<FileNode> children;
+
+    private Map<String, Object> attachments = new HashMap<>();
 
     public FileNode() {
         this(DEFAULT_COMPARE_STRATEGY);
@@ -81,6 +87,14 @@ public class FileNode {
 
     public SortedSet<FileNode> getChildren() {
         return children;
+    }
+
+    public Map<String, Object> getAttachments() {
+        return attachments;
+    }
+
+    public void putAttachment(String key, Object value) {
+        this.attachments.put(key, value);
     }
 
     @Override
