@@ -19,6 +19,7 @@ import cn.x5456.rs.mongo.document.FsFileMetadata;
 import cn.x5456.rs.mongo.document.FsFileTemp;
 import cn.x5456.rs.mongo.document.FsResourceInfo;
 import cn.x5456.rs.mongo.listener.event.AfterMetadataSaveEvent;
+import com.google.common.annotations.Beta;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.Lists;
@@ -672,14 +673,6 @@ public class MongoResourceStorage implements IResourceStorage {
     }
 
     /**
-     * 清除本地所有缓存
-     */
-    public void cleanLocalTemp() {
-        FileUtil.del(LOCAL_TEMP_PATH);
-        FileUtil.mkdir(LOCAL_TEMP_PATH);
-    }
-
-    /**
      * 获取附件信息
      * <p>
      * 1. 第一次添加 metadata 的时候新开一个线程进行处理获取结果
@@ -720,6 +713,29 @@ public class MongoResourceStorage implements IResourceStorage {
                     // 否则可能是解析出来的就是 null 直接返回 Mono.empty()
                     return Mono.empty();
                 });
+    }
+
+    /**
+     * 清除本地所有缓存
+     */
+    @Beta
+    @Override
+    public void cleanLocalTemp() {
+        FileUtil.del(LOCAL_TEMP_PATH);
+        FileUtil.mkdir(LOCAL_TEMP_PATH);
+    }
+
+    /**
+     * 删库
+     */
+    @Beta
+    @Override
+    public void dropMongoDatabase() {
+        mongoTemplate.dropCollection("fs.chunks").subscribe();
+        mongoTemplate.dropCollection("fs.files").subscribe();
+        mongoTemplate.dropCollection("fs.metadata").subscribe();
+        mongoTemplate.dropCollection("fs.resource").subscribe();
+        mongoTemplate.dropCollection("fs.temp").subscribe();
     }
 
     class BigFileUploaderImpl implements BigFileUploader {

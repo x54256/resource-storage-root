@@ -2,6 +2,7 @@ package cn.x5456.rs.def;
 
 import cn.hutool.core.lang.Pair;
 import cn.x5456.rs.entity.ResourceInfo;
+import com.google.common.annotations.Beta;
 import org.springframework.core.io.buffer.DataBuffer;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -116,6 +117,19 @@ public interface IResourceStorage {
      */
     <T> Mono<T> getAttachment(String path, String key, Class<T> tClass);
 
+    // ============================== 辅助开发使用的接口，慎用
+
+    /**
+     * 清除本地所有缓存
+     */
+    @Beta
+    void cleanLocalTemp();
+
+    /**
+     * 删库
+     */
+    @Beta
+    void dropMongoDatabase();
 
     // TODO: 2021/4/25 小文件下载的时候用 0 拷贝 https://www.cnblogs.com/-wenli/p/13380616.html
 }
