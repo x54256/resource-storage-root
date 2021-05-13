@@ -2,18 +2,15 @@ package cn.x5456.rs.mongo.listener;
 
 import cn.hutool.core.util.IdUtil;
 import cn.x5456.infrastructure.util.CompressUtils;
-import cn.x5456.infrastructure.util.FileNode;
+import cn.x5456.infrastructure.util.FileNodeDTO;
 import cn.x5456.infrastructure.util.FileNodeUtil;
 import cn.x5456.infrastructure.util.FileTypeGuessUtil;
 import cn.x5456.rs.mongo.MongoResourceStorage;
 import cn.x5456.rs.mongo.document.FsFileMetadata;
 import cn.x5456.rs.mongo.listener.event.AfterMetadataSaveEvent;
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationListener;
 import org.springframework.data.mongodb.core.ReactiveMongoTemplate;
-import org.springframework.util.CollectionUtils;
 
 import java.util.Map;
 
@@ -58,19 +55,18 @@ public class AfterMetadataSaveEventListener implements ApplicationListener<After
 
                     if ("zip".equals(fileType)) {
                         String extractPath = CompressUtils.extract(localFilePath);
-                        FileNode fileNode = FileNodeUtil.getFileNode(extractPath, node -> {
+                        FileNodeDTO fileNode = FileNodeUtil.getFileNode(extractPath, node -> {
                             String path = IdUtil.objectId();
                             mongoResourceStorage.uploadFile(localFilePath, path).subscribe();
-                            node.putAttachment("path", path);
+                            node.getAttachments().put("path", path);
                         });
 
                         Map<String, Object> map = metadata.getFileContentMetadata();
                         map.put("fileNode", fileNode);
 
-                        mongoTemplate.save(metadata).subscribe((x) ->log.info("结束"));
+                        mongoTemplate.save(metadata).subscribe((x) -> log.info("结束"));
                     }
                 });
-
 
 
 //        String fileType = FileTypeGuessUtil.getTypeByPath(officialPath);
