@@ -1,18 +1,24 @@
 package cn.x5456.rs.mongo.listener;
 
+import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.IdUtil;
 import cn.x5456.infrastructure.util.CompressUtils;
 import cn.x5456.infrastructure.util.FileNodeDTO;
 import cn.x5456.infrastructure.util.FileNodeUtil;
 import cn.x5456.infrastructure.util.FileTypeGuessUtil;
+import cn.x5456.rs.attachment.ZipFileNode;
+import cn.x5456.rs.constant.AttachmentConstant;
 import cn.x5456.rs.mongo.MongoResourceStorage;
 import cn.x5456.rs.mongo.document.FsFileMetadata;
 import cn.x5456.rs.mongo.listener.event.AfterMetadataSaveEvent;
+import com.google.common.collect.ImmutableList;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.compress.archivers.ArchiveStreamFactory;
 import org.springframework.context.ApplicationListener;
 import org.springframework.data.mongodb.core.ReactiveMongoTemplate;
 
-import java.util.Map;
+import java.util.List;
 
 /**
  * 解析压缩文件的监听器
@@ -22,6 +28,10 @@ import java.util.Map;
  */
 @Slf4j
 public class AfterMetadataSaveEventListener implements ApplicationListener<AfterMetadataSaveEvent> {
+
+    private static final List<String> COMPRESS_PACKAGE_TYPE_LIST = ImmutableList.of(
+            ArchiveStreamFactory.TAR, ArchiveStreamFactory.ZIP, ArchiveStreamFactory.SEVEN_Z
+    );
 
     // TODO: 2021/5/11 有密码的怎么办
 
@@ -39,11 +49,9 @@ public class AfterMetadataSaveEventListener implements ApplicationListener<After
         /*
         0. 下载文件（通过 api）
         1. 判断文件类型需不需要处理
-        2. 如果需要处理则保存一些（进度）信息
+        todo 2. 如果需要处理则保存一些（进度）信息
         4. 解析文件，保存 attachments
-
          */
-        log.info("监听处理开始======");
         String fileName = event.getFileName();
         FsFileMetadata metadata = event.getSource();
 
@@ -53,28 +61,25 @@ public class AfterMetadataSaveEventListener implements ApplicationListener<After
                     metadata.setFileType(fileType);
                     mongoTemplate.save(metadata).subscribe();
 
-                    if ("zip".equals(fileType)) {
+                    if (COMPRESS_PACKAGE_TYPE_LIST.contains(fileType)) {
                         String extractPath = CompressUtils.extract(localFilePath);
                         FileNodeDTO fileNode = FileNodeUtil.getFileNode(extractPath, node -> {
                             String path = IdUtil.objectId();
                             mongoResourceStorage.uploadFile(localFilePath, path).subscribe();
-                            node.getAttachments().put("path", path);
+                            node.addAttachment(ZipFileNode.PATH, path);
                         });
 
-                        Map<String, Object> map = metadata.getAttachments();
-                        map.put("fileNode", fileNode);
+                        // 将 fileNode 映射为 zipFileNode
+                        ZipFileNode zipFileNode = BeanUtil.toBean(fileNode.getAttachments(), ZipFileNode.class);
+                        BeanUtil.copyProperties(fileNode, zipFileNode);
 
-                        mongoTemplate.save(metadata).subscribe((x) -> log.info("结束"));
+                        metadata.getAttachments().put(AttachmentConstant.FILE_NODE, zipFileNode);
+                        mongoTemplate.save(metadata).subscribe(m -> {
+                            log.info("压缩包文件解析成功！");
+                            // 删除解压出来的压缩包
+                            FileUtil.del(extractPath);
+                        });
                     }
                 });
-
-
-//        String fileType = FileTypeGuessUtil.getTypeByPath(officialPath);
-//        MongoResourceStorage.this.getFileMetadata(fileHash)
-//                .subscribe(metadata -> {
-//                    metadata.setFileType(fileType);
-//                    mongoTemplate.save(metadata).subscribe();
-//                });
-//        return officialPath;
     }
 }

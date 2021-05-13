@@ -3,6 +3,7 @@ package cn.x5456.infrastructure.util;
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.io.FileUtil;
 import lombok.Data;
+import org.springframework.data.annotation.Transient;
 
 import java.io.IOException;
 import java.nio.file.FileVisitResult;
@@ -101,17 +102,30 @@ public final class FileNodeUtil {
     @Data
     public static class FileNode {
 
+        /**
+         * 1. 目录在前文件在后
+         * 2. 按照文件名排序
+         */
         private static final Comparator<FileNode> DEFAULT_COMPARE_STRATEGY =
                 Comparator.<FileNode, Boolean>comparing(x -> !x.getIsDirectory()).thenComparing(x -> x.getName().toLowerCase());
 
-        private Path path;
+        @Transient
+        private transient Path path;
+
         private BasicFileAttributes attrs;
+
         private String name;
+
         private Boolean isDirectory;
+
         private Integer depth;
-        private FileNode pre;
-        private SortedSet<FileNode> children;
-        private Map<String, Object> attachments = new HashMap<>();
+
+        @Transient
+        private transient FileNode pre;
+
+        private final SortedSet<FileNode> children;
+
+        private final Map<String, Object> attachments = new HashMap<>();
 
         public FileNode() {
             children = new TreeSet<>(DEFAULT_COMPARE_STRATEGY);
@@ -119,6 +133,14 @@ public final class FileNodeUtil {
 
         public void addChildNode(FileNode fileNode) {
             this.children.add(fileNode);
+        }
+
+        public void addAttachment(String key, Object value) {
+            this.attachments.put(key, value);
+        }
+
+        public void addAttachments(Map<String, Object> attachments) {
+            this.attachments.putAll(attachments);
         }
     }
 

@@ -228,6 +228,8 @@ public class MongoResourceStorage implements IResourceStorage {
                                 // 如果是新上传的则复制到本地缓存文件夹
                                 .doOnSuccess(metadata -> {
 
+                                    log.info("文件「{}」上传成功！", fileName);
+
                                     // 上传完成后设置为 true
                                     upload.set(true);
 
@@ -681,7 +683,13 @@ public class MongoResourceStorage implements IResourceStorage {
         // 获取文件信息
         return this.getResourceInfo(path)
                 .flatMap(fsResourceInfo -> this.getReadyMetadata(fsResourceInfo.getFileHash()))
-                .map(fsFileMetadata ->  ((T) fsFileMetadata.getAttachments().get(key)));
+                .flatMap(fsFileMetadata -> {
+                    Object o = fsFileMetadata.getAttachments().get(key);
+                    if (o != null) {
+                        return Mono.just((T) o);
+                    }
+                    return Mono.empty();
+                });
     }
 
     class BigFileUploaderImpl implements BigFileUploader {
