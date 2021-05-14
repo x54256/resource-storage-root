@@ -2,6 +2,7 @@ package cn.x5456.rs.mongo.attachment;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.io.FileUtil;
+import cn.hutool.core.io.IORuntimeException;
 import cn.hutool.core.util.IdUtil;
 import cn.x5456.infrastructure.util.CompressUtils;
 import cn.x5456.infrastructure.util.FileNodeDTO;
@@ -26,6 +27,7 @@ import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Scheduler;
 import reactor.core.scheduler.Schedulers;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -62,38 +64,55 @@ public class FileNodeAttachmentProcess implements AttachmentProcess<ZipFileNode>
                     mongoTemplate.findOne(query, FsResourceInfo.class)
                             .publishOn(scheduler)   // 切换到普通线程，不能阻塞 nio 线程（指的不是下面的 block()）
                             .subscribe(resourceInfo -> {
-                                // 推测文件的类型，并保存
-                                String fileType = FileTypeGuessUtil.getTypeByPath(localFilePath, resourceInfo.getFileName());
-                                metadata.getAttachments().put(AttachmentConstant.FILE_TYPE, fileType);
-                                mongoTemplate.save(metadata).subscribe();
+                                try {
+                                    // 推测文件的类型，并保存
+                                    String fileType = FileTypeGuessUtil.getTypeByPath(localFilePath, resourceInfo.getFileName());
+                                    metadata.getAttachments().put(AttachmentConstant.FILE_TYPE, fileType);
+                                    mongoTemplate.save(metadata).subscribe();
 
-                                // 如果文件是压缩包，则解析其中文件结构
-                                if (!COMPRESS_PACKAGE_TYPE_LIST.contains(fileType)) {
-                                    sink.error(new RuntimeException("该文件不是压缩包，无法解析！"));
-                                    return;
+                                    // 如果文件是压缩包，则解析其中文件结构
+                                    if (!COMPRESS_PACKAGE_TYPE_LIST.contains(fileType)) {
+                                        sink.error(new RuntimeException("该文件不是压缩包，无法解析！"));
+                                        return;
+                                    }
+
+                                    // 解压并解析
+                                    String extractPath = CompressUtils.extract(localFilePath);
+                                    FileNodeDTO fileNode = FileNodeUtil.getFileNode(extractPath, node -> {
+                                        String path = IdUtil.objectId();
+                                        // TODO: 2021/5/14 暂时阻塞上传，否则会被下面删除
+                                        mongoResourceStorage.uploadFile(node.getPath().toString(), path).block();
+                                        node.addAttachment(ZipFileNode.PATH, path);
+                                    });
+
+                                    // 将 fileNode 映射为 zipFileNode
+                                    ZipFileNode zipFileNode = this.convert(fileNode);
+                                    metadata.getAttachments().put(AttachmentConstant.FILE_NODE, zipFileNode);
+                                    mongoTemplate.save(metadata).subscribe(x -> log.info("压缩包文件解析成功！"));
+
+                                    // 删除解压出来的压缩包
+                                    FileUtil.del(extractPath);
+
+                                    sink.success(zipFileNode);
+                                } catch (IORuntimeException e) {
+                                    sink.error(e);
                                 }
-
-                                // 解压并解析
-                                String extractPath = CompressUtils.extract(localFilePath);
-                                FileNodeDTO fileNode = FileNodeUtil.getFileNode(extractPath, node -> {
-                                    String path = IdUtil.objectId();
-                                    mongoResourceStorage.uploadFile(node.getPath().toString(), path).subscribe();
-                                    node.addAttachment(ZipFileNode.PATH, path);
-                                });
-
-                                // todo 将 fileNode 映射为 zipFileNode
-                                ZipFileNode zipFileNode = BeanUtil.toBean(fileNode.getAttachments(), ZipFileNode.class);
-                                BeanUtil.copyProperties(fileNode, zipFileNode);
-                                metadata.getAttachments().put(AttachmentConstant.FILE_NODE, zipFileNode);
-                                mongoTemplate.save(metadata).subscribe(x -> log.info("压缩包文件解析成功！"));
-
-                                // 删除解压出来的压缩包
-                                FileUtil.del(extractPath);
-
-                                sink.success(zipFileNode);
                             });
                 }));
 
         return zipFileNodeMono.block();
+    }
+
+    private ZipFileNode convert(FileNodeDTO fileNode) {
+        ZipFileNode zipFileNode = BeanUtil.toBean(fileNode.getAttachments(), ZipFileNode.class);
+        BeanUtil.copyProperties(fileNode, zipFileNode);
+
+        List<ZipFileNode> children = new ArrayList<>();
+        for (FileNodeDTO child : fileNode.getChildren()) {
+            children.add(this.convert(child));
+        }
+        zipFileNode.setChildren(children);
+
+        return zipFileNode;
     }
 }
