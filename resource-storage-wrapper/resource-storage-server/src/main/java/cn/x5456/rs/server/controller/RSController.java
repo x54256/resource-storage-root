@@ -2,11 +2,13 @@ package cn.x5456.rs.server.controller;
 
 import cn.hutool.core.lang.Pair;
 import cn.hutool.core.util.IdUtil;
+import cn.hutool.core.util.ObjectUtil;
 import cn.x5456.rs.def.IResourceStorage;
 import cn.x5456.rs.def.UploadProgress;
 import cn.x5456.rs.entity.ResourceInfo;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
+import io.swagger.annotations.ApiParam;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
@@ -192,4 +194,18 @@ public class RSController {
     public Mono<Boolean> uploadError(@PathVariable String fileHash) {
         return resourceStorage.getBigFileUploader().uploadError(fileHash);
     }
+
+    @ApiOperation("获取文件附件信息")
+    @GetMapping("/v1/files/attachment/{path}/{key}")
+    public Mono<Object> getAttachment(@PathVariable @ApiParam(value = "文件存储标识") String path,
+                                      @PathVariable @ApiParam(value = "附件类型") String key) {
+        return resourceStorage.getAttachment(path, key, Object.class);
+    }
+
+    @ApiOperation("根据path查询hash值")
+    @GetMapping("/v1/files/hash/{path}")
+    public Mono<String> getFileHash(@PathVariable @ApiParam(value = "文件存储标识") String path) {
+        return resourceStorage.getFileHashByPath(path);
+    }
+
 }
