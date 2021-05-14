@@ -14,6 +14,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 public class FsResourceInfo implements ResourceInfo {
 
     public static final String PATH = "id";
+    public static final String METADATA_ID = "metadataId";
 
     @Id
     private String id;

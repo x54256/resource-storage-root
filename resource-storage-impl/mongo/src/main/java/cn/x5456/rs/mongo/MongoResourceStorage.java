@@ -663,7 +663,7 @@ public class MongoResourceStorage implements IResourceStorage {
     @Override
     public Mono<String> getFileHashByPath(String path) {
         return this.getResourceInfo(path)
-                .switchIfEmpty(Mono.error(new RuntimeException("传入的文件 hash 在服务器中不存在~")))
+                .switchIfEmpty(Mono.error(new RuntimeException(StrUtil.format("输入的 path：「{}」不正确！", path))))
                 .map(FsResourceInfo::getFileHash);
     }
 
@@ -678,8 +678,9 @@ public class MongoResourceStorage implements IResourceStorage {
      * 1. 第一次添加 metadata 的时候新开一个线程进行处理获取结果
      * 2. 第一次调用的时候，检查是否已经存在，如果不存在则处理获取结果再保存
      *
-     * @param key 附件信息key
-     * @param <T> 需要转换的类型
+     * @param path   服务上存储的标识
+     * @param key    附件信息key
+     * @param tClass 需要转换的类型
      * @return 附件信息
      */
     @Override
@@ -692,7 +693,22 @@ public class MongoResourceStorage implements IResourceStorage {
          */
         // 获取文件信息
         return this.getResourceInfo(path)
-                .flatMap(fsResourceInfo -> this.getReadyMetadata(fsResourceInfo.getFileHash()))
+                .switchIfEmpty(Mono.error(new RuntimeException(StrUtil.format("输入的 path：「{}」不正确！", path))))
+                .flatMap(fsResourceInfo -> this.getAttachmentByHash(fsResourceInfo.getFileHash(), key, tClass));
+    }
+
+    /**
+     * 获取附件信息
+     *
+     * @param fileHash 文件 hash
+     * @param key      附件信息key
+     * @param tClass   需要转换的类型
+     * @return 附件信息
+     */
+    @Override
+    public <T> Mono<T> getAttachmentByHash(String fileHash, String key, Class<T> tClass) {
+        return this.getReadyMetadata(fileHash)
+                .switchIfEmpty(Mono.error(new RuntimeException("传入的文件 hash 还未上传！")))
                 .publishOn(scheduler)   // 下面的操作 AttachmentProcessContainer#getProcess 是阻塞的，所以要切换到普通线程
                 .flatMap(fsFileMetadata -> {
                     // 判断是否已经存在

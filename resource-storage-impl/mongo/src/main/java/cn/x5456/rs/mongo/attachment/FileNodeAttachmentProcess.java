@@ -81,7 +81,7 @@ public class FileNodeAttachmentProcess implements AttachmentProcess<ZipFileNode>
                                     node.addAttachment(ZipFileNode.PATH, path);
                                 });
 
-                                // 将 fileNode 映射为 zipFileNode
+                                // todo 将 fileNode 映射为 zipFileNode
                                 ZipFileNode zipFileNode = BeanUtil.toBean(fileNode.getAttachments(), ZipFileNode.class);
                                 BeanUtil.copyProperties(fileNode, zipFileNode);
                                 metadata.getAttachments().put(AttachmentConstant.FILE_NODE, zipFileNode);
