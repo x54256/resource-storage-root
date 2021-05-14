@@ -1,0 +1,16 @@
+server:
+  port: 8888
+management:
+  endpoints:
+    web:
+      exposure:
+        include: '*'
+  endpoint:
+    health:
+      show-details: always
+spring:
+  application:
+    name: rs-webclient
+  profiles:
+    active: @profile.active@
+

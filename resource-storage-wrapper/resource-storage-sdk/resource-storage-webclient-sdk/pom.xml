@@ -17,9 +17,60 @@
     </properties>
 
     <dependencies>
+        <!-- 项目内依赖-->
+        <dependency>
+            <groupId>cn.x5456</groupId>
+            <artifactId>resource-storage-api</artifactId>
+        </dependency>
+
+        <!-- 第三方依赖-->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-webflux</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-loadbalancer</artifactId>
+        </dependency>
     </dependencies>
+
+    <profiles>
+        <profile>
+            <id>nacos</id>
+            <properties>
+                <!-- Nacos 配置服务 -->
+                <nacos.file_extension>yaml</nacos.file_extension>
+                <nacos.file_name>application-nacos-webclient</nacos.file_name>
+            </properties>
+        </profile>
+    </profiles>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <!--先排除所有的配置文件-->
+                <excludes>
+                    <exclude>*.yml</exclude>
+                </excludes>
+            </resource>
+            <resource>
+                <directory>src/main/resources</directory>
+                <!--引入所需环境的配置文件-->
+                <filtering>true</filtering>
+                <includes>
+                    <include>bootstrap.yml</include>
+                    <include>bootstrap-${profile.active}.yml</include>
+                    <include>application.yml</include>
+                    <include>application-${profile.active}.yml</include>
+                </includes>
+            </resource>
+        </resources>
+    </build>
 </project>
