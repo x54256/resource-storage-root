@@ -12,7 +12,6 @@ import cn.x5456.rs.attachment.AttachmentProcessContainer;
 import cn.x5456.rs.constant.AttachmentConstant;
 import cn.x5456.rs.def.IResourceStorage;
 import cn.x5456.rs.entity.FileMetadata;
-import cn.x5456.rs.mongo.document.FsFileMetadata;
 import cn.x5456.rs.mongo.document.FsResourceInfo;
 import cn.x5456.rs.mongo.dto.ZipFileNode;
 import com.google.common.collect.ImmutableList;
@@ -59,7 +58,7 @@ public class FileNodeAttachmentProcess implements AttachmentProcess<ZipFileNode>
         Mono<ZipFileNode> zipFileNodeMono = Mono.create(sink -> mongoResourceStorage.downloadFileByFileHash(metadata.getFileHash())
                 .subscribe(localFilePath -> {
                     // 猜测文件类型
-                    Query query = new Query(Criteria.where(FsFileMetadata.FILE_HASH).is(metadata.getFileHash()));
+                    Query query = new Query(Criteria.where(FsResourceInfo.METADATA_ID).is(metadata.getFileHash()));
                     mongoTemplate.findOne(query, FsResourceInfo.class)
                             .publishOn(scheduler)   // 切换到普通线程，不能阻塞 nio 线程（指的不是下面的 block()）
                             .subscribe(resourceInfo -> {
@@ -78,7 +77,7 @@ public class FileNodeAttachmentProcess implements AttachmentProcess<ZipFileNode>
                                 String extractPath = CompressUtils.extract(localFilePath);
                                 FileNodeDTO fileNode = FileNodeUtil.getFileNode(extractPath, node -> {
                                     String path = IdUtil.objectId();
-                                    mongoResourceStorage.uploadFile(localFilePath, path).subscribe();
+                                    mongoResourceStorage.uploadFile(node.getPath().toString(), path).subscribe();
                                     node.addAttachment(ZipFileNode.PATH, path);
                                 });
 
