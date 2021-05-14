@@ -2,7 +2,7 @@ package cn.x5456.rs.server.controller;
 
 import cn.hutool.core.lang.Pair;
 import cn.hutool.core.util.IdUtil;
-import cn.hutool.core.util.ObjectUtil;
+import cn.x5456.rs.common.UnWrapper;
 import cn.x5456.rs.def.IResourceStorage;
 import cn.x5456.rs.def.UploadProgress;
 import cn.x5456.rs.entity.ResourceInfo;
@@ -122,6 +122,7 @@ public class RSController {
     Accept-Ranges: bytes
     content-length: 0
      */
+    @UnWrapper
     @ApiOperation("下载文件v2（支持分段下载 - Range）")
     @GetMapping("/v2/files/{path}")
     public Mono<Resource> downloadV2(@PathVariable String path, ServerHttpResponse response) {

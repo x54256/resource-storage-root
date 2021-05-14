@@ -24,6 +24,10 @@
             <groupId>cn.x5456</groupId>
             <artifactId>resource-storage-api</artifactId>
         </dependency>
+        <dependency>
+            <groupId>cn.x5456</groupId>
+            <artifactId>resource-storage-common</artifactId>
+        </dependency>
 
         <!-- 公司依赖-->
         <!--        <dependency>-->
@@ -48,6 +52,11 @@
 <!--            <groupId>org.springframework.boot</groupId>-->
 <!--            <artifactId>spring-boot-starter-data-redis</artifactId>-->
 <!--        </dependency>-->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-configuration-processor</artifactId>
+            <optional>true</optional>
+        </dependency>
     </dependencies>
 
     <profiles>

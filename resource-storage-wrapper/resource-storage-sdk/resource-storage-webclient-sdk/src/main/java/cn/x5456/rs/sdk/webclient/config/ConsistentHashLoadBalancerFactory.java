@@ -41,7 +41,7 @@ public class ConsistentHashLoadBalancerFactory implements ExchangeFilterFunction
     @Autowired
     private ReactiveLoadBalancer.Factory<ServiceInstance> loadBalancerFactory;
 
-    // TODO: 2021/5/14 实例上线 or 下线
+    // TODO: 2021/5/14 实例上线 or 下线 EventDispatcher NamingEvent  org.springframework.cloud.client.ServiceInstance
     private final Map<String, ConsistentHash<ServiceInstance>> consistentHashCircleMap = new ConcurrentHashMap<>();
 
     @NotNull

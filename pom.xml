@@ -57,6 +57,11 @@
                 <artifactId>mongo</artifactId>
                 <version>${project.version}</version>
             </dependency>
+            <dependency>
+                <groupId>cn.x5456</groupId>
+                <artifactId>resource-storage-common</artifactId>
+                <version>${project.version}</version>
+            </dependency>
 
             <!-- 公司依赖-->
 <!--            <dependency>-->
