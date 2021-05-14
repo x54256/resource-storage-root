@@ -1,7 +1,6 @@
 package cn.x5456.rs.sdk.webclient;
 
 import lombok.extern.slf4j.Slf4j;
-import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -22,7 +21,7 @@ public class WebClientTest {
     @Autowired
     private WebClient webClient;
 
-    @Test
+//    @Test
     public void test() {
         Mono<String> mono = webClient
                 //方法调用，WebClient中提供了多种方法

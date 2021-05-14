@@ -640,7 +640,8 @@ public class MongoResourceStorage implements IResourceStorage {
      */
     @Override
     public Mono<Boolean> deleteFile(String path) {
-        return mongoTemplate.remove(this.getResourceInfo(path)).map(DeleteResult::wasAcknowledged);
+        return mongoTemplate.remove(this.getResourceInfo(path)).map(DeleteResult::wasAcknowledged)
+                .switchIfEmpty(Mono.error(new RuntimeException("输入的 path 不存在！")));
     }
 
     /**
