@@ -799,11 +799,11 @@ public class MongoResourceStorage implements IResourceStorage {
             String endurancePath = LOCAL_TEMP_PATH + fileHash + File.separator + IdUtil.fastUUID() + ENDURANCE_SUFFIX;
             FileUtil.touch(endurancePath);
             return DataBufferUtils.write(dataBufferFlux, Paths.get(endurancePath), StandardOpenOption.CREATE, StandardOpenOption.WRITE)
-                    .then(this.doUploadFileChunk(fileHash, chunk, dataBufferFlux, endurancePath));
+                    .then(this.doUploadFileChunk(fileHash, chunk, endurancePath));
         }
 
         @NotNull
-        private Mono<Boolean> doUploadFileChunk(String fileHash, int chunk, Flux<DataBuffer> dataBufferFlux, String endurancePath) {
+        private Mono<Boolean> doUploadFileChunk(String fileHash, int chunk, String endurancePath) {
 
             /*
             1. 检查文件 hash 是否存在
@@ -814,7 +814,7 @@ public class MongoResourceStorage implements IResourceStorage {
             5. 如果创建成功，则执行上传逻辑，保存到 fs.temp 表中，返回 true
             6. 如果创建失败，则证明已经有了一个线程抢先上传了，返回 false
              */
-
+            Flux<DataBuffer> dataBufferFlux = DataBufferUtils.read(new FileSystemResource(endurancePath), dataBufferFactory, DEFAULT_CHUNK_SIZE);
             return MongoResourceStorage.this.getFileMetadata(fileHash)
                     .switchIfEmpty(this.createOrGet(fileHash))
                     .flatMap(metadata -> this.insertChunkTempInfoV2(fileHash, chunk))
