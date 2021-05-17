@@ -108,6 +108,8 @@ public interface IResourceStorage {
 
     BigFileUploader getBigFileUploader();
 
+    // ============================== other api
+
     /**
      * 获取附件信息
      *
@@ -141,5 +143,5 @@ public interface IResourceStorage {
     @Beta
     void dropMongoDatabase();
 
-    // TODO: 2021/4/25 小文件下载的时候用 0 拷贝 https://www.cnblogs.com/-wenli/p/13380616.html
+    // 2021/4/25 小文件下载的时候用 0 拷贝 https://www.cnblogs.com/-wenli/p/13380616.html
 }
