@@ -1,4 +1,4 @@
-package cn.x5456.rs.mongo.autoconfigure;
+package cn.x5456.rs.autoconfigure;
 
 import cn.x5456.rs.cleanstrategy.CleanUnUploadedTempStrategy;
 import cn.x5456.rs.mongo.cleanstrategy.SchedulerCleanStrategy;
@@ -13,7 +13,6 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Import;
 import org.springframework.data.mongodb.core.ReactiveMongoTemplate;
 import org.springframework.data.redis.core.RedisKeyValueAdapter;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -38,7 +37,6 @@ import java.util.Set;
 @ConditionalOnClass(EnableRedisRepositories.class)
 @ConditionalOnProperty(prefix = "x5456.rs.clean", name = "strategy", havingValue = "redis", matchIfMissing = true)
 @EnableRedisRepositories(value = "cn.x5456.rs.mongo.cleanstrategy.redis", enableKeyspaceEvents = RedisKeyValueAdapter.EnableKeyspaceEvents.ON_STARTUP)
-@Import(RedisCleanStrategyAutoConfiguration.CacheCleanupConfiguration.class)
 @AutoConfigureAfter({RsMongoAutoConfiguration.class, RedisAutoConfiguration.class})
 public class RedisCleanStrategyAutoConfiguration implements CleanUnUploadedTempStrategy {
 
@@ -61,6 +59,7 @@ public class RedisCleanStrategyAutoConfiguration implements CleanUnUploadedTempS
      * Configuration of scheduled job for cleaning up expired sessions.
      */
     @EnableScheduling
+    @Configuration(proxyBeanMethods = false)
     static class CacheCleanupConfiguration implements SchedulingConfigurer {
 
         private final StringRedisTemplate redis;

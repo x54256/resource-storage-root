@@ -6,30 +6,21 @@ import cn.x5456.rs.common.ResponseData;
 import cn.x5456.rs.def.UploadProgress;
 import cn.x5456.rs.entity.ResourceInfo;
 import cn.x5456.rs.sdk.webclient.lb.ConsistentHashLoadBalancerFactory;
-import io.netty.channel.ChannelOption;
-import io.netty.handler.timeout.ReadTimeoutHandler;
-import io.netty.handler.timeout.WriteTimeoutHandler;
 import lombok.Data;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.http.*;
 import org.springframework.http.client.MultipartBodyBuilder;
-import org.springframework.http.client.reactive.ReactorClientHttpConnector;
-import org.springframework.http.codec.json.Jackson2JsonDecoder;
-import org.springframework.http.codec.json.Jackson2JsonEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.netty.http.client.HttpClient;
 
-import javax.annotation.PostConstruct;
 import java.io.File;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 /**
  * @author yujx
@@ -38,41 +29,8 @@ import java.util.concurrent.TimeUnit;
 @Component
 public class RSClient {
 
-    // TODO: 2021/5/17 不知道为啥用 @Value 注解注入不行
-    private String rsUrl = "http://rs-server/rest/rs";
-
     @Autowired
-    private ConsistentHashLoadBalancerFactory lbFunction;
-
     private WebClient client;
-
-    /*
-      参考：https://segmentfault.com/a/1190000021133071
-     */
-    @PostConstruct
-    public void init() {
-        HttpClient httpClient = HttpClient.create()
-                .tcpConfiguration(tcpClient -> tcpClient.doOnConnected(connection -> {
-                    //读写超时设置
-                    connection.addHandlerLast(new ReadTimeoutHandler(10, TimeUnit.SECONDS)).addHandlerLast(new WriteTimeoutHandler(10));
-                })
-                        //连接超时设置
-                        .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 10000)
-                        .option(ChannelOption.TCP_NODELAY, true));
-
-        this.client = WebClient.builder()
-                .clientConnector(new ReactorClientHttpConnector(httpClient))
-                .codecs(configurer -> {
-                    // 设置最大内存占用为 2M
-                    configurer.defaultCodecs().maxInMemorySize(2 * 1024 * 1024);
-                    configurer.customCodecs().register(new Jackson2JsonDecoder());
-                    configurer.customCodecs().register(new Jackson2JsonEncoder());
-                })
-                .filter(lbFunction)
-                .baseUrl(rsUrl)
-                .build();
-    }
-
 
     public Mono<ResourceInfo> uploadFile(File file) {
 

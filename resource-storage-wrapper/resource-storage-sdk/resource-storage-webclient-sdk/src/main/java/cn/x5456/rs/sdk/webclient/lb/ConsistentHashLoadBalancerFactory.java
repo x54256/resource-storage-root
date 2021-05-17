@@ -1,6 +1,8 @@
 package cn.x5456.rs.sdk.webclient.lb;
 
+import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.lang.ConsistentHash;
+import cn.hutool.core.util.StrUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -88,6 +90,9 @@ public class ConsistentHashLoadBalancerFactory implements ExchangeFilterFunction
 
         ConsistentHash<ServiceInstance> consistentHash = consistentHashCircleMap.computeIfAbsent(serviceId, sId -> {
             List<ServiceInstance> instances = discoveryClient.getInstances(sId);
+            if (CollUtil.isEmpty(instances)) {
+                throw new RuntimeException(StrUtil.format("服务『{}』的实例未在线，请稍后再试！", serviceId));
+            }
             return new ConsistentHash<>(VIRTUAL_NODE_COUNT, instances);
         });
 

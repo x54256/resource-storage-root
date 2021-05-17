@@ -1,4 +1,4 @@
-package cn.x5456.rs.mongo.autoconfigure;
+package cn.x5456.rs.autoconfigure;
 
 import cn.x5456.rs.cleanstrategy.CleanUnUploadedTempStrategy;
 import cn.x5456.rs.mongo.cleanstrategy.SchedulerCleanStrategy;

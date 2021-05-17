@@ -1,5 +1,5 @@
 # Auto Configure
 org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
-cn.x5456.rs.mongo.autoconfigure.RsMongoAutoConfiguration,\
-cn.x5456.rs.mongo.autoconfigure.RedisCleanStrategyAutoConfiguration,\
-cn.x5456.rs.mongo.autoconfigure.CleanStrategyAutoConfiguration
+cn.x5456.rs.autoconfigure.RsMongoAutoConfiguration,\
+cn.x5456.rs.autoconfigure.RedisCleanStrategyAutoConfiguration,\
+cn.x5456.rs.autoconfigure.CleanStrategyAutoConfiguration
