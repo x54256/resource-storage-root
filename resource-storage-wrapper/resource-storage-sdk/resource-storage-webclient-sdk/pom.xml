@@ -34,17 +34,6 @@
         </dependency>
     </dependencies>
 
-    <profiles>
-        <profile>
-            <id>nacos</id>
-            <properties>
-                <!-- Nacos 配置服务 -->
-                <nacos.file_extension>yaml</nacos.file_extension>
-                <nacos.file_name>application-nacos-webclient</nacos.file_name>
-            </properties>
-        </profile>
-    </profiles>
-
     <build>
         <plugins>
             <plugin>
