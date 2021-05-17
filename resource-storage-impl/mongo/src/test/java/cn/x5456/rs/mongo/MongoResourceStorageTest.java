@@ -30,6 +30,7 @@ import reactor.core.scheduler.Scheduler;
 import java.io.File;
 import java.nio.file.Paths;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import static cn.x5456.rs.constant.DataBufferConstant.DEFAULT_CHUNK_SIZE;
 
@@ -38,7 +39,7 @@ import static cn.x5456.rs.constant.DataBufferConstant.DEFAULT_CHUNK_SIZE;
  * @date 2021/05/08 10:28
  */
 @Slf4j
-@SpringBootTest
+@SpringBootTest(classes = BootstrapConfig.class)
 @RunWith(SpringRunner.class)
 public class MongoResourceStorageTest {
 
@@ -162,7 +163,7 @@ public class MongoResourceStorageTest {
     }
 
     private void delete() {
-        mongoResourceStorage.deleteFile(pathBig).block();
+        mongoResourceStorage.deleteFile(pathBig).onErrorReturn(false).block();
         this.uploadError();
     }
 
@@ -211,6 +212,11 @@ public class MongoResourceStorageTest {
     public void testBigDownload() {
         mongoResourceStorage.cleanLocalTemp();
         this.uploadCompleted();
+        try {
+            TimeUnit.SECONDS.sleep(1);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
         mongoResourceStorage.cleanLocalTemp();
         mongoResourceStorage.downloadFile(pathBig).block();
     }

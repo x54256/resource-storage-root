@@ -1,5 +1,8 @@
 package cn.x5456.rs.sdk.webclient.client;
 
+import cn.hutool.core.io.FileUtil;
+import cn.x5456.rs.entity.ResourceInfo;
+import cn.x5456.rs.sdk.webclient.BootstrapConfig;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -15,7 +18,7 @@ import java.io.File;
  * @author yujx
  * @date 2021/05/17 09:56
  */
-@SpringBootTest
+@SpringBootTest(classes = BootstrapConfig.class)
 @RunWith(SpringRunner.class)
 public class RSClientTest {
 
@@ -23,29 +26,9 @@ public class RSClientTest {
     private RSClient client;
 
     @Test
-    public void uploadFile() {
-        Assert.assertNotNull(client.uploadFile(new File("/Users/x5456/Desktop/1.txt")).block());
-    }
-
-    @Test
     public void downloadV2() {
-        ClientResponse response = client.downloadV2("60a1d27cee925445354ae62e", HttpRange.createByteRange(0, 3)).block();
+        ResourceInfo resourceInfo = client.uploadFile(new File(FileUtil.getAbsolutePath("1.txt"))).block();
+        ClientResponse response = client.downloadV2(resourceInfo.getId(), HttpRange.createByteRange(0, 3)).block();
         Assert.assertEquals(4L, response.headers().contentLength().getAsLong());
-    }
-
-    @Test
-    public void delete() {
-        Boolean block = client.delete("60a1d27cee925445354ae62e").block();
-        Assert.assertTrue(block);
-    }
-
-    @Test
-    public void isExist() {
-        System.out.println(client.isExist("123").block());
-    }
-
-    @Test
-    public void secondPass() {
-        System.out.println(client.secondPass("123", "123.tmp").block());
     }
 }

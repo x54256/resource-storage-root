@@ -1,7 +1,5 @@
 package cn.x5456.rs.mongo;
 
-import org.junit.Test;
-
 import java.io.IOException;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
@@ -14,7 +12,7 @@ import java.util.List;
  */
 public class FileLoopTest {
 
-    @Test
+//    @Test
     public void test() throws IOException {
 
         FileNode root = new FileNode(null, null, null);
