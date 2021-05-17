@@ -16,7 +16,14 @@
     <modules>
         <module>resource-storage-gateway</module>
         <module>resource-storage-webclient-sdk</module>
+        <module>resource-storage-feign</module>
     </modules>
 
+    <dependencies>
+        <dependency>
+            <groupId>cn.x5456</groupId>
+            <artifactId>resource-storage-common</artifactId>
+        </dependency>
+    </dependencies>
 
 </project>

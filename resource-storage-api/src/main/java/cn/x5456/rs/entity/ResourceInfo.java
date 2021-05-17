@@ -23,6 +23,9 @@ public interface ResourceInfo {
 
     /**
      * {@link FileMetadata#getId()}
+     *
+     * @deprecated fileHash 就是 metadataId
      */
+    @Deprecated
     String getMetadataId();
 }

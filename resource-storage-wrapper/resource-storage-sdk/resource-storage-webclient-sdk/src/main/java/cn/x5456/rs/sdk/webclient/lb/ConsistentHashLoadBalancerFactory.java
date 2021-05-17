@@ -1,4 +1,4 @@
-package cn.x5456.rs.sdk.webclient.config;
+package cn.x5456.rs.sdk.webclient.lb;
 
 import cn.hutool.core.lang.ConsistentHash;
 import lombok.extern.slf4j.Slf4j;
@@ -34,6 +34,8 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ConsistentHashLoadBalancerFactory implements ExchangeFilterFunction {
 
     private final static int VIRTUAL_NODE_COUNT = 5;
+
+    public final static String FILE_HASH = "fileHash";
 
     @Autowired
     private DiscoveryClient discoveryClient;
@@ -90,7 +92,7 @@ public class ConsistentHashLoadBalancerFactory implements ExchangeFilterFunction
         });
 
         // 获取请求中的 fileHash 属性，如果没有则随机生成一个 uuid 值
-        Object fileHash = request.attribute("fileHash").orElse(null);
+        Object fileHash = request.attribute(FILE_HASH).orElse(null);
         if (Objects.isNull(fileHash)) {
             return this.choose(serviceId);
         }
@@ -101,7 +103,6 @@ public class ConsistentHashLoadBalancerFactory implements ExchangeFilterFunction
             return Mono.just(new EmptyResponse());
         }
 
-        // todo 只拦截 get 请求
         Response<ServiceInstance> response = new DefaultResponse(consistentHash.get(fileHash));
         return Mono.just(response);
     }

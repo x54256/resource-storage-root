@@ -21,6 +21,9 @@ public final class ResponseData implements Serializable {
     @ApiModelProperty("业务码，禁止代码中耦合，仅展示及后台排错用")
     private int code;
 
+    public ResponseData() {
+    }
+
     private ResponseData(Object data) {
         this.status = HttpStatus.OK.value();
         this.code = 1;

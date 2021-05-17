@@ -20,7 +20,9 @@ public interface FileMetadata {
 
     /**
      * @return 获取当前文件的唯一 hash 值，也可以使用 hash 值作为 id
+     * @deprecated id 就是 fileHash
      */
+    @Deprecated
     String getFileHash();
 
     /**

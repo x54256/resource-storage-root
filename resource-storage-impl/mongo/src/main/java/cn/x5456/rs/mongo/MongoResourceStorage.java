@@ -781,6 +781,7 @@ public class MongoResourceStorage implements IResourceStorage {
         @Override
         public Mono<ResourceInfo> secondPass(String fileHash, String fileName, String path) {
             return MongoResourceStorage.this.getReadyMetadata(fileHash)
+                    .switchIfEmpty(Mono.error(new RuntimeException("传入的文件 hash 不存在！")))
                     .flatMap(m -> MongoResourceStorage.this.insertResource(m, fileName, path));
         }
 
@@ -949,7 +950,16 @@ public class MongoResourceStorage implements IResourceStorage {
          */
         @Override
         public Mono<Boolean> uploadError(String fileHash) {
-            return this.cleanTemp(fileHash);
+            return Mono.create(sink -> {
+                // 清理缓存表
+                this.cleanTemp(fileHash).subscribe();
+                // 清理元数据表
+                Criteria c = Criteria.where(FsFileMetadata.FILE_HASH).is(fileHash);
+                mongoTemplate.findOne(Query.query(c), FsFileMetadata.class)
+                        .subscribe(m -> mongoTemplate.remove(m).subscribe());
+                // 本地缓存暂时不清理了
+                sink.success(true);
+            });
         }
 
         @NotNull
@@ -959,7 +969,8 @@ public class MongoResourceStorage implements IResourceStorage {
             return mongoTemplate.find(Query.query(criteria), FsFileTemp.class)
                     .flatMap(mongoTemplate::remove)
                     .collectList()
-                    .map(deleteResults -> true);
+                    .map(deleteResults -> true)
+                    .switchIfEmpty(Mono.just(false));
         }
 
         /**

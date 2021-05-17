@@ -38,7 +38,7 @@ public class RSController {
 
     @ApiOperation("上传小文件")
     @PostMapping(value = "/v1/files", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public Mono<ResourceInfo> requestBodyFlux(@RequestPart("file") FilePart filePart) {
+    public Mono<ResourceInfo> uploadFile(@RequestPart("file") FilePart filePart) {
         String filename = filePart.filename();
         String path = IdUtil.objectId();
         Flux<DataBuffer> content = filePart.content();
