@@ -1,8 +1,8 @@
 package cn.x5456.rs.sdk.webclient.lb;
 
 import cn.hutool.core.collection.CollUtil;
-import cn.hutool.core.lang.ConsistentHash;
 import cn.hutool.core.util.StrUtil;
+import cn.x5456.infrastructure.util.ConcurrentConsistentHash;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,7 +14,6 @@ import org.springframework.cloud.client.loadbalancer.LoadBalancerUriTools;
 import org.springframework.cloud.client.loadbalancer.Response;
 import org.springframework.cloud.client.loadbalancer.reactive.ReactiveLoadBalancer;
 import org.springframework.http.HttpStatus;
-import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.ClientRequest;
 import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.ExchangeFilterFunction;
@@ -32,10 +31,9 @@ import java.util.concurrent.ConcurrentHashMap;
  * @date 2021/05/14 09:26
  */
 @Slf4j
-@Component
-public class ConsistentHashLoadBalancerFactory implements ExchangeFilterFunction {
+public abstract class ConsistentHashLoadBalancerFactory implements ExchangeFilterFunction {
 
-    private final static int VIRTUAL_NODE_COUNT = 5;
+    protected final static int VIRTUAL_NODE_COUNT = 5;
 
     public final static String FILE_HASH = "fileHash";
 
@@ -46,7 +44,7 @@ public class ConsistentHashLoadBalancerFactory implements ExchangeFilterFunction
     private ReactiveLoadBalancer.Factory<ServiceInstance> loadBalancerFactory;
 
     // TODO: 2021/5/14 实例上线 or 下线 EventDispatcher NamingEvent  org.springframework.cloud.client.ServiceInstance
-    private final Map<String, ConsistentHash<ServiceInstance>> consistentHashCircleMap = new ConcurrentHashMap<>();
+    private final Map<String, ConcurrentConsistentHash<ServiceInstance>> consistentHashCircleMap = new ConcurrentHashMap<>();
 
     @NotNull
     @Override
@@ -88,15 +86,15 @@ public class ConsistentHashLoadBalancerFactory implements ExchangeFilterFunction
 
     private Mono<Response<ServiceInstance>> choose(String serviceId, ClientRequest request) {
 
-        ConsistentHash<ServiceInstance> consistentHash = consistentHashCircleMap.computeIfAbsent(serviceId, sId -> {
+        ConcurrentConsistentHash<ServiceInstance> consistentHash = consistentHashCircleMap.computeIfAbsent(serviceId, sId -> {
             List<ServiceInstance> instances = discoveryClient.getInstances(sId);
             if (CollUtil.isEmpty(instances)) {
                 throw new RuntimeException(StrUtil.format("服务『{}』的实例未在线，请稍后再试！", serviceId));
             }
-            return new ConsistentHash<>(VIRTUAL_NODE_COUNT, instances);
+            return this.createConsistentHash(serviceId, instances);
         });
 
-        // 获取请求中的 fileHash 属性，如果没有则随机生成一个 uuid 值
+        // 获取请求中的 fileHash 属性，如果没有则使用 {@link ReactorLoadBalancerExchangeFilterFunction} 负载策略
         Object fileHash = request.attribute(FILE_HASH).orElse(null);
         if (Objects.isNull(fileHash)) {
             return this.choose(serviceId);
@@ -111,6 +109,8 @@ public class ConsistentHashLoadBalancerFactory implements ExchangeFilterFunction
         Response<ServiceInstance> response = new DefaultResponse(consistentHash.get(fileHash));
         return Mono.just(response);
     }
+
+    protected abstract ConcurrentConsistentHash<ServiceInstance> createConsistentHash(String serviceId, List<ServiceInstance> instances);
 
     private Mono<Response<ServiceInstance>> choose(String serviceId) {
         ReactiveLoadBalancer<ServiceInstance> loadBalancer = loadBalancerFactory.getInstance(serviceId);

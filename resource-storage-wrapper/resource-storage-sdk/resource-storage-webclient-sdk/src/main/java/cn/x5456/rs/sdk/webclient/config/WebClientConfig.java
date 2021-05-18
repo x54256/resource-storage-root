@@ -1,6 +1,7 @@
 package cn.x5456.rs.sdk.webclient.config;
 
 import cn.x5456.rs.sdk.webclient.lb.ConsistentHashLoadBalancerFactory;
+import cn.x5456.rs.sdk.webclient.lb.NacosConsistentHashLoadBalancerFactory;
 import io.netty.channel.ChannelOption;
 import io.netty.handler.timeout.ReadTimeoutHandler;
 import io.netty.handler.timeout.WriteTimeoutHandler;
@@ -30,7 +31,7 @@ public class WebClientConfig {
     @Bean
     @Profile("nacos")
     public ConsistentHashLoadBalancerFactory consistentHashLoadBalancerFactory() {
-        return new ConsistentHashLoadBalancerFactory();
+        return new NacosConsistentHashLoadBalancerFactory();
     }
 
     /*
