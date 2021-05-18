@@ -28,7 +28,6 @@ import reactor.core.publisher.Flux;
 import reactor.core.scheduler.Scheduler;
 
 import java.io.File;
-import java.nio.file.Paths;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -145,7 +144,7 @@ public class MongoResourceStorageTest {
     String pathBig = IdUtil.simpleUUID();
 
 
-    @Test
+//    @Test
     public void uploadFileChunk() {
         this.delete();
 
@@ -221,13 +220,13 @@ public class MongoResourceStorageTest {
         mongoResourceStorage.downloadFile(pathBig).block();
     }
 
-    @Test
-    public void testTransferTo() {
-        mongoResourceStorage.cleanLocalTemp();
-        this.uploadCompleted();
+//    @Test
+//    public void testTransferTo() {
 //        mongoResourceStorage.cleanLocalTemp();
-        bigFileUploader.transferTo(hash, Paths.get("/Users/x5456/Desktop/1.txt")).block();
-    }
+//        this.uploadCompleted();
+////        mongoResourceStorage.cleanLocalTemp();
+//        bigFileUploader.transferTo(hash, Paths.get("/Users/x5456/Desktop/1.txt")).block();
+//    }
 
     @Test
     public void testFileLock() {

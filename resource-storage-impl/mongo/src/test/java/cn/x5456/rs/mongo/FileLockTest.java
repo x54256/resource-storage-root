@@ -1,5 +1,6 @@
 package cn.x5456.rs.mongo;
 
+import cn.hutool.core.io.FileUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.Test;
 
@@ -30,7 +31,7 @@ public class FileLockTest {
      */
     @Test(expected = OverlappingFileLockException.class)
     public void test() throws Exception {
-        String s = "/Users/x5456/Desktop/1.txt";
+        String s = FileUtil.getAbsolutePath("1.txt");
         Thread t1 = new Thread(() -> {
             try {
                 RandomAccessFile randomAccessFile = new RandomAccessFile(s, "rw");
