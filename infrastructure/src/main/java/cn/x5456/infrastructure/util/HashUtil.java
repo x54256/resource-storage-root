@@ -3,7 +3,7 @@ package cn.x5456.infrastructure.util;
 /**
  * @author: dengdh@dist.com.cn
  * @date: 2021/5/10 16:22
- * @description: todo 优化 {@link cn.hutool.core.lang.ConsistentHash}
+ * @description: 优化 {@link cn.hutool.core.lang.ConsistentHash}
  */
 public class HashUtil {
     /**

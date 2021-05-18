@@ -46,9 +46,14 @@ public class RSController {
         return resourceStorage.uploadFile(content, filename, path);
     }
 
-    // TODO: 2021/5/9 返回值拦截应该拦截 Jackson 转换器，不能拦截所有，否则连这个方法也被拦截了
-    // TODO: 2021/5/8 好像是不写 content-type 就直接下载，写了才会预览 -> 当我没说，不知道，到时候学习下
-    // TODO: 2021/5/9 文件预览记得过滤掉 jsp 这种东西，防止那几个攻击
+
+    /*
+    暂时放弃预览功能。
+    2021/5/8 好像是不写 content-type 就直接下载，写了才会预览 -> 当我没说，不知道，到时候学习下
+    2021/5/9 文件预览记得过滤掉 jsp 这种东西，防止那几个攻击
+     */
+
+
     /*
     参考资料：
     https://developer.mozilla.org/zh-CN/docs/Web/HTTP/Range_requests

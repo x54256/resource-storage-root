@@ -43,7 +43,6 @@ public abstract class ConsistentHashLoadBalancerFactory implements ExchangeFilte
     @Autowired
     private ReactiveLoadBalancer.Factory<ServiceInstance> loadBalancerFactory;
 
-    // TODO: 2021/5/14 实例上线 or 下线 EventDispatcher NamingEvent  org.springframework.cloud.client.ServiceInstance
     private final Map<String, ConcurrentConsistentHash<ServiceInstance>> consistentHashCircleMap = new ConcurrentHashMap<>();
 
     @NotNull
@@ -89,7 +88,7 @@ public abstract class ConsistentHashLoadBalancerFactory implements ExchangeFilte
         ConcurrentConsistentHash<ServiceInstance> consistentHash = consistentHashCircleMap.computeIfAbsent(serviceId, sId -> {
             List<ServiceInstance> instances = discoveryClient.getInstances(sId);
             if (CollUtil.isEmpty(instances)) {
-                throw new RuntimeException(StrUtil.format("服务『{}』的实例未在线，请稍后再试！", serviceId));
+                throw new RuntimeException(StrUtil.format("服务「{}」的实例未在线，请稍后再试！", serviceId));
             }
             return this.createConsistentHash(serviceId, instances);
         });

@@ -120,15 +120,16 @@ public class MongoResourceStorage implements IResourceStorage {
         for (File file : ls) {
             if (file.isFile()) {
                 String suffix = "." + FileUtil.getSuffix(file);
-                if (!suffix.equals(OFFICIAL_SUFFIX)) {
-                    FileUtil.del(file);
+                if (suffix.equals(OFFICIAL_SUFFIX)) {
+                    continue;
                 }
             }
+            FileUtil.del(file);
         }
     }
 
     /**
-     * 构建一个 LRU 缓存实例 todo 配合 hash 环
+     * 构建一个 LRU 缓存实例
      */
     private final Cache<String, FsFileMetadata> cache = CacheBuilder.newBuilder()
             .maximumSize(100) // 设置缓存的最大容量
@@ -633,7 +634,6 @@ public class MongoResourceStorage implements IResourceStorage {
 
     /**
      * 删除文件服务上的文件
-     * todo（引用计数）
      *
      * @param path 服务上存储的标识
      * @return 是否删除成功

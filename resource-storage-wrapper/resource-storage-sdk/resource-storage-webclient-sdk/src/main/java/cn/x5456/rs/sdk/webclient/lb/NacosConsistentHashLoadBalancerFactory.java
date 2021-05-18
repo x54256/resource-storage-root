@@ -66,6 +66,9 @@ public class NacosConsistentHashLoadBalancerFactory extends ConsistentHashLoadBa
             }
         }
 
+        /**
+         * 注：调用这个方法的线程都是同一个所以基本不会有线程安全问题
+         */
         @Override
         public void onEvent(Event event) {
             log.info("event：「{}」", event);
@@ -73,6 +76,7 @@ public class NacosConsistentHashLoadBalancerFactory extends ConsistentHashLoadBa
                 List<Instance> instances = ((NamingEvent) event).getInstances();
                 List<ServiceInstance> serviceInstances = NacosServiceDiscovery.hostToServiceInstanceList(instances, serviceId);
                 List<NacosServiceInstanceWrapper> wrapper = NacosServiceInstanceWrapper.wrapper(serviceInstances);
+                // 更新 hash 环
                 circle.reset(wrapper);
             }
         }
