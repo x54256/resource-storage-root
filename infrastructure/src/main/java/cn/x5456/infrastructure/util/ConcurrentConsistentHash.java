@@ -2,7 +2,6 @@ package cn.x5456.infrastructure.util;
 
 import cn.hutool.core.lang.hash.Hash32;
 import cn.hutool.core.util.HashUtil;
-import com.google.common.collect.Sets;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.Serializable;
@@ -17,7 +16,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  * 算法详解：http://blog.csdn.net/sparkliang/article/details/5279393
  * 算法实现：https://weblogs.java.net/blog/2007/11/27/consistent-hashing
  * <p>
- * 注：使用 {@link ConcurrentConsistentHash} 必须重写以下方法
+ * 注：使用 {@link ConcurrentConsistentHash} 的节点对象必须重写以下方法
  * <p>
  * {@link #equals(java.lang.Object)}
  * {@link #hashCode()}
@@ -158,8 +157,7 @@ public class ConcurrentConsistentHash<T> implements Serializable {
             HashSet<T> nodeSet = new HashSet<>(circle.values());
             HashSet<T> inputNodeSet = new HashSet<>(nodes);
             if (nodeSet.size() == inputNodeSet.size()) {
-                Sets.SetView<T> diff = Sets.difference(nodeSet, inputNodeSet);
-                if (diff.size() == 0) {
+                if (nodeSet.containsAll(inputNodeSet)) {
                     return;
                 }
             }

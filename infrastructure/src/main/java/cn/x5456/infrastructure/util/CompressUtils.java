@@ -44,10 +44,6 @@ public final class CompressUtils {
         return targetDir;
     }
 
-    public static void main(String[] args) {
-        extract("/Users/x5456/Downloads/QQ_DOWNLOADS/归档.zip");
-    }
-
     private CompressUtils() {
     }
 }
