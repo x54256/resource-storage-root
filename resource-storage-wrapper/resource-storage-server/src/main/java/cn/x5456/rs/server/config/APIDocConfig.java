@@ -1,8 +1,10 @@
 package cn.x5456.rs.server.config;
 
+import com.fasterxml.classmate.TypeResolver;
 import lombok.Data;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.server.reactive.ServerHttpRequest;
@@ -29,6 +31,9 @@ public class APIDocConfig {
     private String author = "xdata@dist.com.cn";
     private String version = "1.0.0-SNAPSHOT";
 
+    @Autowired
+    private TypeResolver typeResolver;
+
     @Bean
     public Docket api() {
         return new Docket(DocumentationType.OAS_30)
@@ -37,6 +42,11 @@ public class APIDocConfig {
                 .pathMapping("/")
                 .enable(this.enable)
                 .apiInfo(this.apiInfo())
+//                //自定义规则，如果遇到 DeferredResult，则把泛型类转成json
+//                .alternateTypeRules(
+//                        AlternateTypeRules.newRule(
+//                                typeResolver.resolve(DeferredResult.class, typeResolver.resolve(ResponseEntity.class, WildcardType.class)),
+//                                typeResolver.resolve(WildcardType.class)))
                 .select()
                 .apis(RequestHandlerSelectors.basePackage("cn.x5456.rs.server.controller"))
                 .paths(PathSelectors.any())

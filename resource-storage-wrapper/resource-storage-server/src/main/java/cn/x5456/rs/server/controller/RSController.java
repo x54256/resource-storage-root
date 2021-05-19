@@ -130,7 +130,7 @@ public class RSController {
     @UnWrapper
     @ApiOperation("下载文件v2（支持分段下载 - Range）")
     @GetMapping("/v2/files/{path}")
-    public Mono<Resource> downloadV2(@PathVariable String path, ServerHttpResponse response) {
+    public Mono<Resource> downloadV2(@ApiParam("资源文件的唯一标识") @PathVariable String path, ServerHttpResponse response) {
         return resourceStorage.downloadFile(path)
                 .flatMap(pair -> {
                     String fileName = pair.getKey();
@@ -157,47 +157,50 @@ public class RSController {
 
     @ApiOperation("删除文件")
     @DeleteMapping("/v1/files/{path}")
-    public Mono<Boolean> delete(@PathVariable String path) {
+    public Mono<Boolean> delete(@ApiParam("资源文件的唯一标识") @PathVariable String path) {
         return resourceStorage.deleteFile(path);
     }
 
     @ApiOperation("大文件上传 - 检查文件是否已经上传过了")
     @GetMapping("/v1/files/big/secondPass/{fileHash}")
-    public Mono<Boolean> isExist(@PathVariable String fileHash) {
+    public Mono<Boolean> isExist(@ApiParam("文件 hash 值，使用 sha256 计算") @PathVariable String fileHash) {
         return resourceStorage.getBigFileUploader().isExist(fileHash);
     }
 
     @ApiOperation("大文件上传 - 秒传")
     @PostMapping("/v1/files/big/secondPass/{fileHash}")
-    public Mono<ResourceInfo> secondPass(@PathVariable String fileHash, @RequestParam String fileName) {
+    public Mono<ResourceInfo> secondPass(@ApiParam("文件 hash 值，使用 sha256 计算") @PathVariable String fileHash,
+                                         @ApiParam("文件名") @RequestParam String fileName) {
         String path = IdUtil.objectId();
         return resourceStorage.getBigFileUploader().secondPass(fileHash, fileName, path);
     }
 
     @ApiOperation("大文件上传 - 上传每一片")
     @PostMapping("/v1/files/big/{fileHash}/{chunk}")
-    public Mono<Boolean> uploadFileChunk(@PathVariable String fileHash, @PathVariable int chunk,
+    public Mono<Boolean> uploadFileChunk(@ApiParam("文件 hash 值，使用 sha256 计算") @PathVariable String fileHash,
+                                         @ApiParam("当前文件的第几块") @PathVariable int chunk,
                                          @RequestPart("file") FilePart filePart) {
         return resourceStorage.getBigFileUploader().uploadFileChunk(fileHash, chunk, filePart.content());
     }
 
     @ApiOperation("大文件上传 - 获取上传进度")
     @GetMapping("/v1/files/big/{fileHash}")
-    public Flux<Pair<Integer, UploadProgress>> uploadProgress(@PathVariable String fileHash) {
+    public Flux<Pair<Integer, UploadProgress>> uploadProgress(@ApiParam("文件 hash 值，使用 sha256 计算") @PathVariable String fileHash) {
         return resourceStorage.getBigFileUploader().uploadProgress(fileHash);
     }
 
     @ApiOperation("大文件上传 - 全部上传成功，执行“合并”操作")
     @PostMapping("/v1/files/big/{fileHash}")
-    public Mono<ResourceInfo> uploadCompleted(@PathVariable String fileHash, @RequestParam String fileName,
-                                         @RequestParam int totalNumberOfChunks) {
+    public Mono<ResourceInfo> uploadCompleted(@ApiParam("文件 hash 值，使用 sha256 计算") @PathVariable String fileHash,
+                                              @ApiParam("文件名") @RequestParam String fileName,
+                                              @ApiParam("当前文件一共分成了多少块") @RequestParam int totalNumberOfChunks) {
         String path = IdUtil.objectId();
         return resourceStorage.getBigFileUploader().uploadCompleted(fileHash, fileName, totalNumberOfChunks, path);
     }
 
     @ApiOperation("大文件上传 - 上传失败，执行清理操作")
     @DeleteMapping("/v1/files/big/{fileHash}")
-    public Mono<Boolean> uploadError(@PathVariable String fileHash) {
+    public Mono<Boolean> uploadError(@ApiParam("文件 hash 值，使用 sha256 计算") @PathVariable String fileHash) {
         return resourceStorage.getBigFileUploader().uploadError(fileHash);
     }
 

@@ -22,6 +22,11 @@
             <groupId>cn.x5456</groupId>
             <artifactId>infrastructure</artifactId>
         </dependency>
+
+        <dependency>
+            <groupId>io.swagger</groupId>
+            <artifactId>swagger-annotations</artifactId>
+        </dependency>
     </dependencies>
 
 </project>
