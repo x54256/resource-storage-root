@@ -2,6 +2,7 @@ package cn.x5456.rs.mongo;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.io.FileUtil;
+import cn.hutool.core.io.IORuntimeException;
 import cn.hutool.core.io.IoUtil;
 import cn.hutool.core.io.file.FileMode;
 import cn.hutool.core.lang.Pair;
@@ -10,6 +11,7 @@ import cn.hutool.core.util.IdUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.crypto.SecureUtil;
 import cn.hutool.crypto.digest.DigestAlgorithm;
+import cn.x5456.infrastructure.util.FileChannelUtil;
 import cn.x5456.rs.attachment.AttachmentProcessContainer;
 import cn.x5456.rs.def.BigFileUploader;
 import cn.x5456.rs.def.IResourceStorage;
@@ -51,10 +53,7 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.channels.FileLock;
 import java.nio.channels.OverlappingFileLockException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
-import java.nio.file.StandardOpenOption;
+import java.nio.file.*;
 import java.security.MessageDigest;
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -112,7 +111,7 @@ public class MongoResourceStorage implements IResourceStorage {
     private static final String LOCAL_TEMP_PATH;
 
     static {
-        LOCAL_TEMP_PATH = System.getProperty("java.io.tmpdir") + "cn.x5456.rs" + File.separator;
+        LOCAL_TEMP_PATH = System.getProperty("java.io.tmpdir") + File.separator + "cn.x5456.rs" + File.separator;
         FileUtil.mkdir(LOCAL_TEMP_PATH);
 
         // 每次重启清理未"转正"的文件（包括 LOCK_SUFFIX、TMP_SUFFIX 和 ENDURANCE_SUFFIX）
@@ -207,6 +206,7 @@ public class MongoResourceStorage implements IResourceStorage {
         // 注：这个路径是随机的，每次上传都会创建一个这样的临时文件
         // TODO: 2021/5/8 自动清理工具可以获取系统的磁盘使用情况，当超过阈值（可以设置）再进行清理
         String endurancePath = LOCAL_TEMP_PATH + IdUtil.fastUUID() + ENDURANCE_SUFFIX;
+        // TODO: 2021/5/19 在写入文件的时候计算出 hash 值，mmp 这个工具类没给流钩子做不了，那就整好自己重写一个扩展吧，用 MapperByteBuffer
         return DataBufferUtils.write(dataBufferFlux, Paths.get(endurancePath), StandardOpenOption.CREATE, StandardOpenOption.WRITE)
                 .then(this.doUploadFile(endurancePath, fileName, path, true));
     }
@@ -981,11 +981,6 @@ public class MongoResourceStorage implements IResourceStorage {
          */
         @Override
         public Mono<String> endurance(String fileHash) {
-            // 拼接碎片缓存文件夹，如果不存在则创建
-            String enduranceDir = LOCAL_TEMP_PATH + fileHash + File.separator;
-            if (!FileUtil.exist(enduranceDir)) {
-                FileUtil.mkdir(enduranceDir);
-            }
 
             // 拼接整个文件的缓存路径，通过文件锁保证只有一个"请求"进行文件的下载
             String tempPath = MongoResourceStorage.this.getFileTempPath(fileHash);
@@ -997,6 +992,9 @@ public class MongoResourceStorage implements IResourceStorage {
                 return Mono.just(officialPath);
             }
 
+            // 拼接碎片缓存文件夹
+            String enduranceDir = LOCAL_TEMP_PATH + fileHash + File.separator;
+
             return MongoResourceStorage.this.getReadyMetadata(fileHash)
                     .publishOn(scheduler)   // 从 nio 线程切换到 scheduler 线程
                     .flatMap(metadata -> MongoResourceStorage.this.merge(metadata, tempPath, officialPath, lockPath,
@@ -1005,13 +1003,23 @@ public class MongoResourceStorage implements IResourceStorage {
                                 String endurancePath = enduranceDir + filesInfo.getChunk() + CHUNK_SUFFIX;
                                 // 如果本地已经存在了则直接从本地获取
                                 if (FileUtil.exist(endurancePath)) {
-                                    Flux<DataBuffer> read = DataBufferUtils.read(new FileSystemResource(endurancePath), dataBufferFactory, DEFAULT_CHUNK_SIZE);
-                                    return DataBufferUtils.write(read, randomAccessFile.getChannel())
-                                            .doOnTerminate(() -> {
-                                                // 2021/5/9 复制之后删除该文件或文件夹
-                                                FileUtil.del(endurancePath);
-                                            })
-                                            .then();
+                                    return Mono.create(sink -> scheduler.schedule(() -> {
+                                        try {
+                                            FileChannelUtil.transferFrom(endurancePath, randomAccessFile.getChannel());
+                                            // 2021/5/9 复制之后删除该文件或文件夹
+                                            FileUtil.del(endurancePath);
+                                            sink.success();
+                                        } catch (IORuntimeException e) {
+                                            sink.error(e);
+                                        }
+                                    }));
+//                                    Flux<DataBuffer> read = DataBufferUtils.read(new FileSystemResource(endurancePath), dataBufferFactory, DEFAULT_CHUNK_SIZE);
+//                                    return DataBufferUtils.write(read, randomAccessFile.getChannel())
+//                                            .doOnTerminate(() -> {
+//                                                // 2021/5/9 复制之后删除该文件或文件夹
+//                                                FileUtil.del(endurancePath);
+//                                            })
+//                                            .then();
                                 } else {
                                     // 如果本地不存在，则从 mongo 下载
                                     return MongoResourceStorage.this.doDownloadChunk(filesInfo, randomAccessFile).then();
