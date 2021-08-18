@@ -1,0 +1,10 @@
+#注：
+#1. 容器化部署方式，此部分配置读取的是 DockerFile 中的环境变量，请勿修改当前配置文件。
+#2. 如果是 war 包部署的方式，则可以讲 namespace 和 server-addr 改为实际 nacos 的配置。
+spring:
+  cloud:
+    nacos:
+      config:
+        namespace: null
+        server-addr: null
+        file-extension: yaml

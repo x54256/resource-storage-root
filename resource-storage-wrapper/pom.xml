@@ -27,38 +27,132 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.alibaba.cloud</groupId>
+            <artifactId>spring-cloud-starter-alibaba-nacos-discovery</artifactId>
+        </dependency>
     </dependencies>
 
     <profiles>
+        <!-- 容器化部署方式 -->
         <profile>
-            <id>normal</id>
+            <id>containerization</id>
             <properties>
-                <profile.active>normal</profile.active>
+                <!-- 这个 ip 对应了这个地址：http://harbor.xdata.group/ -->
+                <docker.registry>161.189.83.164</docker.registry>
+                <!-- 各个项目发版本的时需要修改这个为自己的仓库地址 -->
+                <docker.image.prefix>nr_sh2018gh115</docker.image.prefix>
             </properties>
+            <build>
+                <pluginManagement>
+                    <plugins>
+                        <plugin>
+                            <groupId>com.spotify</groupId>
+                            <artifactId>dockerfile-maven-plugin</artifactId>
+                            <version>1.4.13</version>
+                            <executions>
+                                <execution>
+                                    <id>default</id>
+                                    <goals>
+                                        <goal>build</goal>
+                                        <goal>push</goal>
+                                    </goals>
+                                </execution>
+                            </executions>
+                            <configuration>
+                                <repository>
+                                    ${docker.registry}/${docker.image.prefix}/b_${project.artifactId}
+                                </repository>
+                                <tag>${project.version}</tag>
+                                <useMavenSettingsForAuth>true</useMavenSettingsForAuth>
+                            </configuration>
+                        </plugin>
+                    </plugins>
+                </pluginManagement>
+            </build>
+        </profile>
+
+        <!--开发环境-->
+        <profile>
+            <id>dev</id>
+            <properties>
+                <profile.active>dev</profile.active>
+            </properties>
+            <dependencies>
+                <dependency>
+                    <groupId>javax.servlet</groupId>
+                    <artifactId>javax.servlet-api</artifactId>
+                </dependency>
+            </dependencies>
             <activation>
                 <activeByDefault>true</activeByDefault>
             </activation>
+            <build>
+                <resources>
+                    <!-- 只引入对应 profile 的配置文件 -->
+                    <resource>
+                        <directory>src/main/resources</directory>
+                        <excludes>
+                            <exclude>**/*.dll</exclude>
+                            <exclude>application*.yml</exclude>
+                            <exclude>bootstrap*.yml</exclude>
+                        </excludes>
+                    </resource>
+                    <resource>
+                        <directory>src/main/resources</directory>
+                        <!-- 是否过滤资源以用参数化值替换标记。这些值取自 properties 元素和 filters 元素中列出的文件中的属性。 -->
+                        <filtering>true</filtering>
+                        <includes>
+                            <include>**/*.dll</include>
+                            <include>bootstrap.yml</include>
+                            <include>bootstrap-${profile.active}.yml</include>
+                            <include>application.yml</include>
+                            <include>application-${profile.active}.yml</include>
+                        </includes>
+                    </resource>
+                </resources>
+            </build>
         </profile>
+        <!-- 部署环境 -->
         <profile>
-            <id>nacos</id>
+            <id>prod</id>
             <properties>
-                <profile.active>nacos</profile.active>
-                <!-- Nacos 配置服务 -->
-                <nacos.config.enabled>true</nacos.config.enabled>
-                <nacos.discovery.enabled>true</nacos.discovery.enabled>
-                <nacos.host.port>127.0.0.1:8848</nacos.host.port>
-                <nacos.namespace>rs</nacos.namespace>
+                <profile.active>prod</profile.active>
             </properties>
             <dependencies>
+                <dependency>
+                    <groupId>javax.servlet</groupId>
+                    <artifactId>javax.servlet-api</artifactId>
+                </dependency>
+                <!-- 使用 nacos 作为配置中心 -->
                 <dependency>
                     <groupId>com.alibaba.cloud</groupId>
                     <artifactId>spring-cloud-starter-alibaba-nacos-config</artifactId>
                 </dependency>
-                <dependency>
-                    <groupId>com.alibaba.cloud</groupId>
-                    <artifactId>spring-cloud-starter-alibaba-nacos-discovery</artifactId>
-                </dependency>
             </dependencies>
+            <build>
+                <resources>
+                    <!-- 容器化版本排除所有 application-* 的配置文件，从 nacos 中获取 -->
+                    <resource>
+                        <directory>src/main/resources</directory>
+                        <excludes>
+                            <exclude>**/*.dll</exclude>
+                            <exclude>application*.yml</exclude>
+                            <exclude>bootstrap*.yml</exclude>
+                        </excludes>
+                    </resource>
+                    <resource>
+                        <directory>src/main/resources</directory>
+                        <filtering>true</filtering>
+                        <includes>
+                            <include>**/*.dll</include>
+                            <include>bootstrap.yml</include>
+                            <include>bootstrap-${profile.active}.yml</include>
+                            <include>application.yml</include>
+                        </includes>
+                    </resource>
+                </resources>
+            </build>
         </profile>
     </profiles>
 </project>

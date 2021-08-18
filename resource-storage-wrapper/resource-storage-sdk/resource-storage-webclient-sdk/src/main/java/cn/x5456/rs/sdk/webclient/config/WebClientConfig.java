@@ -7,9 +7,10 @@ import io.netty.handler.timeout.ReadTimeoutHandler;
 import io.netty.handler.timeout.WriteTimeoutHandler;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Profile;
 import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.http.codec.json.Jackson2JsonDecoder;
 import org.springframework.http.codec.json.Jackson2JsonEncoder;
@@ -29,7 +30,8 @@ public class WebClientConfig {
     private String rsUrl;
 
     @Bean
-    @Profile("nacos")
+    @ConditionalOnClass(name = "com.alibaba.cloud.nacos.NacosServiceAutoConfiguration")
+    @ConditionalOnProperty(value = "spring.cloud.nacos.discovery.enabled", matchIfMissing = true)
     public ConsistentHashLoadBalancerFactory consistentHashLoadBalancerFactory() {
         return new NacosConsistentHashLoadBalancerFactory();
     }

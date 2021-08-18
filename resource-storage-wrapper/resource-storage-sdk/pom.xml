@@ -9,7 +9,6 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>cn.x5456</groupId>
     <artifactId>resource-storage-sdk</artifactId>
     <packaging>pom</packaging>
     <version>1.0-SNAPSHOT</version>
