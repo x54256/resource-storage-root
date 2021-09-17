@@ -4,3 +4,7 @@ spring:
       host: 47.100.88.162
       port: 27017
       database: test
+  cloud:
+    nacos:
+      discovery:
+        enabled: false

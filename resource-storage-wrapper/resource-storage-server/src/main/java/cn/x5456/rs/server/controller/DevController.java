@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
  * @date: 2021/5/14 9:11
  * @description:
  */
-@Api(tags = "文件存储服务-测试功能(开发使用)")
+@Api(tags = "DEV 功能（仅限开发使用）")
 @RestController
 @RequestMapping("/rest/rs/dev")
 public class DevController {
@@ -34,7 +34,7 @@ public class DevController {
     }
 
     @ApiOperation("本地和数据库全清除")
-    @GetMapping("/v1/all")
+    @DeleteMapping("/v1/all")
     public void cleanAll() {
         mongoResourceStorage.cleanLocalTemp();
         mongoResourceStorage.dropMongoDatabase();
