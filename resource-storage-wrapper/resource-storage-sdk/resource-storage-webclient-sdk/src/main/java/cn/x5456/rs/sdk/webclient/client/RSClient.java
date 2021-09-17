@@ -188,5 +188,10 @@ public class RSClient {
         // 元数据 id
         @Deprecated
         private String metadataId;
+
+        /**
+         * 文件的 Mime Type
+         */
+        private String mimeType;
     }
 }

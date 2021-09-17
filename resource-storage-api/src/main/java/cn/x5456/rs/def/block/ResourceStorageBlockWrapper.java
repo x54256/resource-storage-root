@@ -92,7 +92,7 @@ public class ResourceStorageBlockWrapper implements IBlockResourceStorage {
      * @param path 服务上存储的标识
      * @return Pair key-文件名，value-本地缓存路径
      */
-    public Pair<String, String> downloadFile(String path) {
+    public Pair<ResourceInfo, String> downloadFile(String path) {
         return resourceStorage.downloadFile(path).block();
     }
 

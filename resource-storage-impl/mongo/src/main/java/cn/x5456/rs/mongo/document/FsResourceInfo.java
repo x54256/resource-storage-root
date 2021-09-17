@@ -27,4 +27,9 @@ public class FsResourceInfo implements ResourceInfo {
 
     // 元数据 id @see FileMetadata
     private String metadataId;
+
+    /**
+     * 文件的 Mime Type
+     */
+    private String mimeType;
 }

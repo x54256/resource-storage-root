@@ -12,6 +12,7 @@ import cn.hutool.core.util.StrUtil;
 import cn.hutool.crypto.SecureUtil;
 import cn.hutool.crypto.digest.DigestAlgorithm;
 import cn.x5456.infrastructure.util.FileChannelUtil;
+import cn.x5456.infrastructure.util.FileMimeTypeUtil;
 import cn.x5456.rs.attachment.AttachmentProcessContainer;
 import cn.x5456.rs.def.BigFileUploader;
 import cn.x5456.rs.def.IResourceStorage;
@@ -306,6 +307,7 @@ public class MongoResourceStorage implements IResourceStorage {
         fsResourceInfo.setFileName(fileName);
         fsResourceInfo.setFileHash(metadata.getFileHash());
         fsResourceInfo.setMetadataId(metadata.getId());
+        fsResourceInfo.setMimeType(FileMimeTypeUtil.getMimeType(fileName));
 
         return mongoTemplate.insert(fsResourceInfo);
     }
@@ -622,13 +624,12 @@ public class MongoResourceStorage implements IResourceStorage {
      * @return Pair key-文件名，value-文件在本地的缓存路径
      */
     @Override
-    public Mono<Pair<String, String>> downloadFile(String path) {
+    public Mono<Pair<ResourceInfo, String>> downloadFile(String path) {
         return this.getResourceInfo(path)
                 .switchIfEmpty(Mono.error(new RuntimeException(StrUtil.format("输入的 path：「{}」不正确！", path))))
                 .flatMap(r -> {
                     String fileHash = r.getFileHash();
-                    String fileName = r.getFileName();
-                    return this.downloadFileByFileHash(fileHash).map(localFilePath -> new Pair<>(fileName, localFilePath));
+                    return this.downloadFileByFileHash(fileHash).map(localFilePath -> new Pair<>(r, localFilePath));
                 });
     }
 

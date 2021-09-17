@@ -69,7 +69,7 @@ public interface IResourceStorage {
      * @param path 服务上存储的标识
      * @return Pair key-文件名，value-文件在本地的缓存路径
      */
-    Mono<Pair<String, String>> downloadFile(String path);
+    Mono<Pair<ResourceInfo, String>> downloadFile(String path);
 
     /**
      * 根据文件 hash 从文件服务中获取文件

@@ -2,6 +2,7 @@ package cn.x5456.rs.server.controller;
 
 import cn.hutool.core.lang.Pair;
 import cn.hutool.core.util.IdUtil;
+import cn.hutool.core.util.StrUtil;
 import cn.x5456.rs.common.UnWrapper;
 import cn.x5456.rs.def.IResourceStorage;
 import cn.x5456.rs.def.UploadProgress;
@@ -13,6 +14,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.buffer.DataBuffer;
+import org.springframework.core.io.buffer.DataBufferFactory;
+import org.springframework.core.io.buffer.DataBufferUtils;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -23,6 +26,8 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.nio.charset.StandardCharsets;
+
+import static cn.x5456.rs.constant.DataBufferConstant.DEFAULT_CHUNK_SIZE;
 
 /**
  * @author yujx
@@ -36,6 +41,9 @@ public class RSController {
     @Autowired
     private IResourceStorage resourceStorage;
 
+    @Autowired
+    private DataBufferFactory dataBufferFactory;
+
     @ApiOperation("上传小文件")
     @PostMapping(value = "/v1/files", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public Mono<ResourceInfo> uploadFile(@RequestPart("file") FilePart filePart) {
@@ -45,14 +53,6 @@ public class RSController {
 
         return resourceStorage.uploadFile(content, filename, path);
     }
-
-
-    /*
-    暂时放弃预览功能。
-    2021/5/8 好像是不写 content-type 就直接下载，写了才会预览 -> 当我没说，不知道，到时候学习下
-    2021/5/9 文件预览记得过滤掉 jsp 这种东西，防止那几个攻击
-     */
-
 
     /*
     参考资料：
@@ -133,13 +133,13 @@ public class RSController {
     public Mono<Resource> downloadV2(@ApiParam("资源文件的唯一标识") @PathVariable String path, ServerHttpResponse response) {
         return resourceStorage.downloadFile(path)
                 .flatMap(pair -> {
-                    String fileName = pair.getKey();
-                    String localFilePath = pair.getValue();
+                    ResourceInfo resourceInfo = pair.getKey();
+                    String localFilePath = String.valueOf(pair.getValue());
 
                     // 设置文件名的响应头
                     HttpHeaders responseHeaders = response.getHeaders();
                     ContentDisposition disposition = ContentDisposition.builder("attachment")
-                            .filename(fileName, StandardCharsets.UTF_8)
+                            .filename(resourceInfo.getFileName(), StandardCharsets.UTF_8)
                             .build();
                     responseHeaders.setContentDisposition(disposition);
                     return Mono.just(new FileSystemResource(localFilePath));
@@ -154,6 +154,32 @@ public class RSController {
 
     curl -i -H 'Accept: image/png' 'http://127.0.0.1:8080/rest/rs/v2/files/preview/6098c2c0ee92ec96a351eb7d' image/png
      */
+    /*
+    暂时放弃预览功能。
+    2021/5/8 好像是不写 content-type 就直接下载，写了才会预览 -> 当我没说，不知道，到时候学习下
+    2021/5/9 文件预览记得过滤掉 jsp 这种东西，防止那几个攻击
+     */
+
+    @UnWrapper
+    @ApiOperation("文件预览")
+    @GetMapping("/v1/files/preview/{path}")
+    public Mono<Void> preview(@ApiParam("资源文件的唯一标识") @PathVariable String path, ServerHttpResponse response) {
+        return resourceStorage.downloadFile(path)
+                .flatMap(pair -> {
+                    ResourceInfo resourceInfo = pair.getKey();
+                    String localFilePath = String.valueOf(pair.getValue());
+
+                    String mimeType = resourceInfo.getMimeType();
+                    if (StrUtil.isBlank(mimeType)) {
+                        return Mono.error(new RuntimeException("当前文件类型暂不支持预览！"));
+                    }
+
+                    // 如果当前文件有 mimeType，则尝试使用浏览器进行预览
+                    response.getHeaders().setContentType(MediaType.parseMediaType(mimeType));
+                    Flux<DataBuffer> dataBufferFlux = DataBufferUtils.read(new FileSystemResource(localFilePath), dataBufferFactory, DEFAULT_CHUNK_SIZE);
+                    return response.writeAndFlushWith(Mono.just(dataBufferFlux));
+                });
+    }
 
     @ApiOperation("删除文件")
     @DeleteMapping("/v1/files/{path}")

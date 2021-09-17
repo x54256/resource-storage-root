@@ -19,7 +19,7 @@ public interface IBlockResourceStorage {
 
     Boolean downloadFile(String localFilePath, String path);
 
-    Pair<String, String> downloadFile(String path);
+    Pair<ResourceInfo, String> downloadFile(String path);
 
     Boolean deleteFile(String path);
 

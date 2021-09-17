@@ -34,4 +34,9 @@ public interface ResourceInfo {
     @Deprecated
     @ApiModelProperty("已废弃，请勿使用")
     String getMetadataId();
+
+    /**
+     * 获取文件的 Mime Type
+     */
+    String getMimeType();
 }
