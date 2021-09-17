@@ -5,13 +5,13 @@
     <parent>
         <artifactId>resource-storage-wrapper</artifactId>
         <groupId>cn.x5456</groupId>
-        <version>1.0-SNAPSHOT</version>
+        <version>2.0.0-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>resource-storage-sdk</artifactId>
     <packaging>pom</packaging>
-    <version>1.0-SNAPSHOT</version>
+    <version>2.0.0-SNAPSHOT</version>
     <modules>
         <module>resource-storage-gateway</module>
         <module>resource-storage-webclient-sdk</module>
