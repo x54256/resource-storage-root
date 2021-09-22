@@ -54,7 +54,10 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.channels.FileLock;
 import java.nio.channels.OverlappingFileLockException;
-import java.nio.file.*;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
 import java.security.MessageDigest;
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -667,6 +670,32 @@ public class MongoResourceStorage implements IResourceStorage {
         return this.getResourceInfo(path)
                 .switchIfEmpty(Mono.error(new RuntimeException(StrUtil.format("输入的 path：「{}」不正确！", path))))
                 .map(FsResourceInfo::getFileHash);
+    }
+
+    /**
+     * 通过 path 获取对应的资源文件信息
+     *
+     * @param path 服务上存储的标识
+     * @return 资源文件信息
+     */
+    @Override
+    public Mono<? extends ResourceInfo> getResourceInfoByPath(String path) {
+        return this.getResourceInfo(path)
+                .switchIfEmpty(Mono.error(new RuntimeException(StrUtil.format("输入的 path：「{}」不正确！", path))));
+    }
+
+    /**
+     * 通过 path 获取对应的文件元数据信息
+     *
+     * @param path 服务上存储的标识
+     * @return 文件元数据信息
+     */
+    @Override
+    public Mono<FsFileMetadata> getFileMetadataByPath(String path) {
+        return this.getResourceInfo(path)
+                .switchIfEmpty(Mono.error(new RuntimeException(StrUtil.format("输入的 path：「{}」不正确！", path))))
+                .map(FsResourceInfo::getFileHash)
+                .flatMap(this::getReadyMetadata);
     }
 
     @Override

@@ -2,6 +2,7 @@ package cn.x5456.infrastructure.util;
 
 import cn.hutool.core.io.FileTypeUtil;
 import cn.hutool.core.io.FileUtil;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * @author yujx
@@ -16,6 +17,7 @@ public final class FileTypeGuessUtil {
         FileTypeUtil.putFileType("377ABCAF271C", "7z");
     }
 
+    @Nullable
     public static String getTypeByPath(String localTempPath, String fileName) {
         String typeName = FileTypeUtil.getTypeByPath(localTempPath);
         if (fileName == null) {

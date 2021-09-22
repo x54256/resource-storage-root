@@ -4,6 +4,7 @@ import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.lang.Pair;
 import cn.hutool.core.util.IdUtil;
 import cn.hutool.crypto.SecureUtil;
+import cn.x5456.rs.constant.AttachmentConstant;
 import cn.x5456.rs.def.BigFileUploader;
 import cn.x5456.rs.entity.ResourceInfo;
 import cn.x5456.rs.mongo.document.FsResourceInfo;
@@ -25,6 +26,7 @@ import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.gridfs.ReactiveGridFsTemplate;
 import org.springframework.test.context.junit4.SpringRunner;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Scheduler;
 
 import java.io.File;
@@ -234,5 +236,45 @@ public class MongoResourceStorageTest {
         this.uploadCompleted();
         mongoResourceStorage.downloadFile(pathBig).subscribe();
         mongoResourceStorage.downloadFile(pathBig).block();
+    }
+
+    @Test
+    public void downloadFileByFileHash() {
+    }
+
+    @Test
+    public void getFileHashByPath() {
+    }
+
+    @Test
+    public void getResourceInfoByPath() {
+    }
+
+    @Test
+    public void getFileMetadataByPath() {
+    }
+
+    @Test
+    public void getBigFileUploader() {
+    }
+
+    @Test
+    public void getAttachment() {
+        Mono<String> mono = mongoResourceStorage.getAttachment("61455022ee927bcf691f3095", AttachmentConstant.FILE_TYPE, String.class);
+        System.out.println(mono.block());
+    }
+
+    @Test
+    public void getAttachmentByHash() {
+        Mono<String> mono = mongoResourceStorage.getAttachmentByHash("bc59a80693c5882445e34949ac0ba62f39e7b1f8fbdc74e6130ec304dfd3ba95", AttachmentConstant.FILE_TYPE, String.class);
+        System.out.println(mono.block());
+    }
+
+    @Test
+    public void cleanLocalTemp() {
+    }
+
+    @Test
+    public void dropMongoDatabase() {
     }
 }

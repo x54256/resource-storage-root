@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <title>上海数慧</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="js/base.js"></script>
+    <script src="js/gis/leaflet.js"></script>
+    <script src="js/gis/catiline.js"></script>
+    <script src="js/gis/leaflet.ext.min.js"></script>
+    <link rel="stylesheet" href="css/leaflet.css"/>
+    <style>
+        html, body {height: 100%;margin: 0;padding: 0;}
+        #map {height: 100%;background-color: white;}
+    </style>
+</head>
+<body>
+<div id='map'></div>
+<script>
+    Doc.load(function(doc){
+        if (doc.type === "gdb" || doc.type === "gpkg"){
+            display(doc, Doc.getStreamUrl(doc));
+        }else {
+            fetch(Doc.getStreamUrl(doc), {
+                credentials: 'include'
+            }).then(function(resp){
+                return doc.type === "shp" ? resp.arrayBuffer() : resp.text();
+            } ).then(function(data) {
+                display(doc, data);
+            });
+        }
+    });
+
+    function display(doc, dataOrUrl) {
+        let map = L.map('map').setView([0, 0], 0), layer;
+        if (doc.type === "geojson" || doc.type === "gson"){
+            layer = new L.GeoJSON(JSON.parse(dataOrUrl), {onEachFeature: onEachFeature, pointToLayer: pointToLayer});
+        }else if (doc.type === "kml"){
+            layer = new L.KML(new DOMParser().parseFromString(dataOrUrl, 'text/xml'),{pointToLayer: pointToLayer});
+        }else if(doc.type === "shp"){
+            layer = new L.Shapefile(dataOrUrl, { onEachFeature: onEachFeature, pointToLayer: pointToLayer});
+        }else if (doc.type === "gdb"){
+            layer = new L.FileGDB(dataOrUrl,{onEachFeature: onEachFeature, pointToLayer: pointToLayer});
+        }else if (doc.type === "gpkg"){
+            layer = new L.GeoPackageFeatureLayer([], {
+                geoPackageUrl: dataOrUrl,
+                onEachFeature: onEachFeature,
+                pointToLayer: pointToLayer
+            });
+        }
+        layer.addTo(map);
+        try {
+            map.fitBounds(layer.getBounds());
+        }catch (e) {}
+        layer.once("data:loaded", function() {
+            map.fitBounds(layer.getBounds());
+        });
+        map.on("overlayadd", function(e){
+            map.fitBounds(e.layer.getBounds());
+        });
+    }
+
+    window.onEachFeature = function(feature, layer) {
+        if (feature.properties) {
+            layer.bindPopup(Object.keys(feature.properties).map(function(k) {
+                return k + ": " + feature.properties[k];
+            }).join("<br />"));
+        }
+    }
+
+    window.colors = ["#4889f7", "#59bd99","#eb5368", "#8cae9c",
+        "#d2813f", "#214467", "#efd046","#cd5f2b",
+        "#efa19d", "#8AC007","#6f9152","#5ab9d2"];
+
+    window.getColor=function(index){
+        if (index < colors.length){
+            return colors[index];
+        }else{
+            return index % colors.length;
+        }
+    }
+
+    window.pointToLayer = function(feature, latlng) {
+        return colorfulPointToLayer(feature, latlng, getColor(0));
+    }
+
+    window.colorfulPointToLayer = function(feature, latlng, color) {
+        return L.circleMarker(latlng, {
+            radius: 8,
+            fillColor: color,
+            color: color,
+            weight: 1,
+            opacity: 1,
+            fillOpacity: 0.5
+        });
+    }
+</script>
+</body>
+</html>

@@ -2,11 +2,11 @@ package cn.x5456.rs.server.controller;
 
 import cn.hutool.core.lang.Pair;
 import cn.hutool.core.util.IdUtil;
-import cn.hutool.core.util.StrUtil;
 import cn.x5456.rs.common.UnWrapper;
 import cn.x5456.rs.def.IResourceStorage;
 import cn.x5456.rs.def.UploadProgress;
 import cn.x5456.rs.entity.ResourceInfo;
+import cn.x5456.rs.server.controller.preview.FilePreviewHandlerComposite;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
@@ -14,20 +14,18 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.buffer.DataBuffer;
-import org.springframework.core.io.buffer.DataBufferFactory;
-import org.springframework.core.io.buffer.DataBufferUtils;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.codec.multipart.FilePart;
+import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 import java.nio.charset.StandardCharsets;
-
-import static cn.x5456.rs.constant.DataBufferConstant.DEFAULT_CHUNK_SIZE;
 
 /**
  * @author yujx
@@ -42,7 +40,7 @@ public class RSController {
     private IResourceStorage resourceStorage;
 
     @Autowired
-    private DataBufferFactory dataBufferFactory;
+    private FilePreviewHandlerComposite filePreviewHandlerComposite;
 
     @ApiOperation("上传小文件")
     @PostMapping(value = "/v1/files", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -157,27 +155,45 @@ public class RSController {
     /*
     暂时放弃预览功能。
     2021/5/8 好像是不写 content-type 就直接下载，写了才会预览 -> 当我没说，不知道，到时候学习下
-    2021/5/9 文件预览记得过滤掉 jsp 这种东西，防止那几个攻击
+    2021/5/9 文件预览记得过滤掉 jsp 这种RequestContextHolder东西，防止那几个攻击
      */
 
+    // TODO: 2021/9/17 也可以通过 User-Agent 来动态判断
     @UnWrapper
     @ApiOperation("文件预览")
     @GetMapping("/v1/files/preview/{path}")
-    public Mono<Void> preview(@ApiParam("资源文件的唯一标识") @PathVariable String path, ServerHttpResponse response) {
+    public Mono<Void> preview(@ApiParam("资源文件的唯一标识") @PathVariable String path,
+                              @ApiParam("预览的平台") @RequestParam(value = "platform", required = false, defaultValue = "desktop") String platform,
+                              @ApiParam("预览模式") @RequestParam(value = "mode", required = false, defaultValue = "view") String mode,
+                              ServerHttpRequest request, ServerHttpResponse response) {
+
         return resourceStorage.downloadFile(path)
+                .publishOn(Schedulers.elastic())    // why????
                 .flatMap(pair -> {
                     ResourceInfo resourceInfo = pair.getKey();
                     String localFilePath = String.valueOf(pair.getValue());
 
-                    String mimeType = resourceInfo.getMimeType();
-                    if (StrUtil.isBlank(mimeType)) {
+                    if (!filePreviewHandlerComposite.supports(resourceInfo)) {
                         return Mono.error(new RuntimeException("当前文件类型暂不支持预览！"));
                     }
+                    return filePreviewHandlerComposite.handle(request, response, resourceInfo, localFilePath, platform, mode);
+                });
+    }
 
-                    // 如果当前文件有 mimeType，则尝试使用浏览器进行预览
-                    response.getHeaders().setContentType(MediaType.parseMediaType(mimeType));
-                    Flux<DataBuffer> dataBufferFlux = DataBufferUtils.read(new FileSystemResource(localFilePath), dataBufferFactory, DEFAULT_CHUNK_SIZE);
-                    return response.writeAndFlushWith(Mono.just(dataBufferFlux));
+    @ApiOperation("查看文档模型")
+    @GetMapping("/v1/model/{path}")
+    public Mono<Object> getFileModel(@ApiParam("文件存储标识") @PathVariable String path,
+                                     @ApiParam("预览的平台") @RequestParam(value = "platform", required = false, defaultValue = "desktop") String platform,
+                                     @ApiParam("预览模式") @RequestParam(value = "mode", required = false, defaultValue = "view") String mode,
+                                     ServerHttpRequest request) {
+
+        return resourceStorage.getResourceInfoByPath(path)
+                .publishOn(Schedulers.elastic())    // why????
+                .flatMap(resourceInfo -> {
+                    if (!filePreviewHandlerComposite.supports(resourceInfo)) {
+                        return Mono.error(new RuntimeException("当前文件类型暂不支持预览！"));
+                    }
+                    return filePreviewHandlerComposite.getDocModel(request, resourceInfo, platform, mode);
                 });
     }
 

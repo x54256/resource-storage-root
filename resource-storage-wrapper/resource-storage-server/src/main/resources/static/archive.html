@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>XDATA DOC</title>
+    <script src="js/jquery.min.js"></script>
+    <script src="js/jquery.ztree.all.min.js"></script>
+    <script src="js/base.js"></script>
+    <link rel="stylesheet" href="css/zTreeStyle.min.css"/>
+    <style>
+        #zipTree,#placeholder{position: absolute;top: 0;bottom: 0;overflow: auto;}
+        #zipTree{left: 0;width: 250px;}
+        #placeholder{right: 0;left: 260px;border-left: 1px solid lightgray;}
+    </style>
+</head>
+<body>
+<div id="zipTree" class="ztree"></div>
+<div id="placeholder">
+    <iframe id="docFrame" frameborder="0" width="100%" height="100%"></iframe>
+</div>
+<script>
+    (function(){
+        let $docFrame = $("#docFrame");
+
+        Doc.load(function(data){
+            if (data.length > 0) {
+                document.title = data[0].name;
+                render(data);
+            }else{
+                console.log("没有数据");
+            }
+        });
+
+        function render(data){
+            let zNodes = [];
+            data.forEach(function(item){
+                zNodes.push(nodeHandler(item));
+            })
+            $(document).ready(function(){
+                $.fn.zTree.init($("#zipTree"), {
+                    callback: {
+                        onClick: docClick
+                    }
+                }, zNodes);
+            });
+        }
+
+        function nodeHandler(node){
+            let item = {
+                id: node.id,
+                name: node.name,
+                open: true,
+                isParent: true
+            };
+            let children =[];
+            if (node.children){
+                node.children.forEach(function(item){
+                    children.push(nodeHandler(item));
+                });
+            }
+            if (node.docs){
+                node.docs.forEach(function(doc){
+                    children.push({
+                        id: doc.id,
+                        name: doc.name,
+                        link: doc.url + getParams()
+                    });
+                });
+            }
+            item.children = children;
+            return item;
+        }
+
+        function docClick(e, treeId, treeNode) {
+            $.fn.zTree.getZTreeObj("zipTree").expandNode(treeNode);
+            if (treeNode.link){
+                $docFrame.attr("src", treeNode.link);
+            }
+        }
+
+        function getParams(){
+            let params = [];
+            let platform = Doc.getParam("platform");
+            if (platform && platform.length > 0){
+                params.push("platform=" + platform);
+            }
+            let mode = Doc.getParam("mode");
+            if (mode && mode.length > 0){
+                params.push("mode=" + mode);
+            }
+            if (params.length > 0){
+                return "?"+params.join("&");
+            }else{
+                return "";
+            }
+        }
+    })();
+</script>
+</body>
+</html>

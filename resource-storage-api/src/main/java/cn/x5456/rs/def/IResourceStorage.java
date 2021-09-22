@@ -1,6 +1,7 @@
 package cn.x5456.rs.def;
 
 import cn.hutool.core.lang.Pair;
+import cn.x5456.rs.entity.FileMetadata;
 import cn.x5456.rs.entity.ResourceInfo;
 import com.google.common.annotations.Beta;
 import org.springframework.core.io.buffer.DataBuffer;
@@ -102,6 +103,22 @@ public interface IResourceStorage {
      * @return 文件 hash
      */
     Mono<String> getFileHashByPath(String path);
+
+    /**
+     * 通过 path 获取对应的资源文件信息
+     *
+     * @param path 服务上存储的标识
+     * @return 资源文件信息
+     */
+    Mono<? extends ResourceInfo> getResourceInfoByPath(String path);
+
+    /**
+     * 通过 path 获取对应的文件元数据信息
+     *
+     * @param path 服务上存储的标识
+     * @return 文件元数据信息
+     */
+    Mono<? extends FileMetadata> getFileMetadataByPath(String path);
 
     // ============================== 分片上传大文件异步 api
 

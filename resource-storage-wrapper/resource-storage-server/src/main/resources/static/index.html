@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="zh" style="height: 100%;">
+<head>
+    <meta charset="UTF-8">
+    <title>上海数慧-文档中心</title>
+    <script src="js/jquery.min.js"></script>
+    <script src="js/base.js?V20201127"></script>
+    <script src="js/jquery.dataTables.min.js"></script>
+    <script src="js/dataTables.uikit.min.js"></script>
+    <link rel="stylesheet" href="css/uikit.min.css">
+    <link rel="stylesheet" href="css/dataTables.uikit.min.css">
+</head>
+<body>
+<div style="padding: 0 5px;">
+    <fieldset>
+        <legend>直接预览系统外的文档</legend>
+        <small style="color: red">支持格式：.pdf .doc .docx .xls .xlsx .csv .ppt .pptx .txt .js .css .sql .log 等文本文件</small>
+        <br />
+        预览平台: <label><select id="extPlatform">
+        <option></option>
+        <option value="desktop">电脑端</option>
+        <option value="mobile">移动端</option>
+        <option value="embedded">嵌入式</option>
+    </select></label>
+        文档类型：<label> <input id="extType" type="text" style="width: 50px" placeholder="docx"/></label>
+        文档地址：<label> <input id="extUrl" type="text" style="width: 400px" placeholder="http://127.0.0.1/***" /></label>
+        <button id="extBtn">生成预览链接</button><br />
+        <a id="extResult" target="_blank"></a>
+    </fieldset>
+    <fieldset>
+        <legend>上传并预览系统内的文档</legend>
+        <div>
+            <small style="color: red">支持格式：gdb(文件夹或压缩文件)、shp(文件夹或压缩文件) .gpkg .geojson .gson .kml .zip .tar .rar .dwg .dxf .dwf .doc .docx .xls .xlsx .csv .ppt .pptx .mp4 .avi .mp3 .wav .txt .js .css .sql .log ......</small>
+            <br /><small style="color: red">支持所有文件的gzip文件，支持压缩文件嵌套</small>
+            <br /><label for="fileInput">上传文件(可多选)：</label>
+            <input id="fileInput" type="file" multiple="multiple">
+            <label for="folderInput">上传文件夹：</label>
+            <input id="folderInput" type="file" webkitdirectory>
+        </div>
+        <table id="dataTable" class="uk-table uk-table-hover uk-table-striped">
+            <thead>
+            <tr>
+                <td>文件名称</td>
+                <td>上传时间</td>
+                <td>文件大小</td>
+                <td>快速访问</td>
+            </tr>
+            </thead>
+        </table>
+    </fieldset>
+    <script>
+        (function(){
+            $.fn.dataTable.ext.errMode = 'none';
+            $("#dataTable").DataTable({
+                "pagingType": "full_numbers",
+                "searching": false,
+                "ordering": false,
+                "info":     true,
+                "language" : {
+                    "sProcessing" : "处理中...",
+                    "sLengthMenu" : "显示 _MENU_ 项结果",
+                    "sZeroRecords" : "没有匹配结果",
+                    "sInfo" : "显示第 _START_ 至 _END_ 项结果，共 _TOTAL_ 项",
+                    "sInfoEmpty" : "显示第 0 至 0 项结果，共 0 项",
+                    "sInfoFiltered" : "(由 _MAX_ 项结果过滤)",
+                    "sInfoPostFix" : "",
+                    "sSearch" : "搜索:",
+                    "sUrl" : "",
+                    "emptyTable" : "表中数据为空",
+                    "sLoadingRecords" : "载入中...",
+                    "sInfoThousands" : ",",
+                    "paginate" : {
+                        "sFirst" : "首页",
+                        "sPrevious" : "上页",
+                        "sNext" : "下页",
+                        "sLast" : "末页"
+                    },
+                    "aria" : {
+                        "sSortAscending" : ": 以升序排列此列",
+                        "sSortDescending" : ": 以降序排列此列"
+                    }
+                },
+                "serverSide": true,
+                "sAjaxSource": "./list",
+                "fnServerData": function(url, state, fnCallback) {
+                    let counter, offset = 0, size = 10;
+                    state.forEach(function(item){
+                        if(item.name === "sEcho"){
+                            counter = item.value;
+                        }else if(item.name === "iDisplayStart"){
+                            offset = item.value;
+                        }else if(item.name === "iDisplayLength"){
+                            size = item.value;
+                        }
+                    });
+                    $.ajax({
+                        url: `${url}?index=${offset/size}&size=${size}`,
+                        type: 'GET',
+                        dataType: "json",
+                        xhrFields:{withCredentials: true},
+                        success: function (e) {
+                            let pageData = e.data;
+                            fnCallback({
+                                sEcho: counter,
+                                iTotalRecords: pageData.count,
+                                iTotalDisplayRecords: pageData.count,
+                                aaData: pageData.data
+                            });
+                        },
+                        error:function(e) {
+                            alert(e.responseJSON.message);
+                        }
+                    });
+                },
+                createdRow: function(row, data, dataIndex, cells){
+                    cells[0].innerHTML = data.name;
+                    cells[1].innerHTML = new Date(data.createTime).toLocaleString();
+                    cells[2].innerHTML = data.size;
+                    cells[3].innerHTML = `<a href="${data.url}" target="_blank">查看</a>`;
+                }
+            });
+
+            document.getElementById("fileInput").addEventListener("change",uploadFiles);
+            document.getElementById("folderInput").addEventListener("change",uploadFiles);
+
+            function uploadFiles(e){
+                let data = new FormData();
+                for(let i = 0; i < e.target.files.length; i++){
+                    data.append("files",e.target.files[i]);
+                }
+                $.ajax({
+                    url: '.',
+                    dataType: "json",
+                    type: "POST",
+                    data: data,
+                    processData: false,
+                    contentType: false,
+                    xhrFields:{withCredentials: true},
+                    success: function (e) {
+                        location.reload();
+                    },
+                    error: function (e) {
+                        alert(e.responseJSON.message);
+                    }
+                })
+            }
+            $("#extBtn").click(function(e){
+                let $type = $("#extType");
+                let $url = $("#extUrl");
+                let $result = $("#extResult");
+                let $platform = $("#extPlatform");
+                let type = $type.val();
+                if (!type){
+                    alert("请指定文档类型!");
+                    $type.focus();
+                    return;
+                }
+                let url = $url.val();
+                if (!url || Doc.excludeUrls.indexOf(url) > -1){
+                    alert("请指定有效的文档地址!");
+                    $url.focus();
+                    return;
+                }
+                let platform = $platform.val();
+                if (platform && platform.length > 0){
+                    platform = "platform=" + platform+"&";
+                }else{
+                    platform = "";
+                }
+                let path = location.pathname;
+                let result = `${location.origin}${path.substring(0, path.lastIndexOf("/"))}/3rd.html?${platform}type=${type}&url=${encodeURIComponent(url)}`;
+                $result.text(result);
+                $result.attr("href", result);
+            });
+        })();
+    </script>
+</div>
+</body>
+</html>

@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <title>上海数慧</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="js/base.js"></script>
+    <script src="js/gis/leaflet.js"></script>
+    <link rel="stylesheet" href="css/leaflet.css"/>
+    <style>
+        html, body {height: 100%;margin: 0;padding: 0;}
+        #map {height: 100%;background-color: white;}
+    </style>
+</head>
+<body>
+<div id='map'></div>
+<script>
+    (function(){
+        let srcUrl = Doc.getStreamUrl({id:Doc.getId()}) + "?converted=true";
+        let img = new Image();
+        img.onload = function () {
+            let map = L.map('map', {
+                minZoom: -2,
+                maxZoom: 2,
+                crs: L.CRS.Simple
+            });
+            let bounds = [[0,0], [img.height, img.width]];
+            L.imageOverlay(srcUrl, bounds).addTo(map);
+            map.fitBounds(bounds);
+        }
+        img.src = srcUrl;
+    })();
+</script>
+</body>
+</html>
