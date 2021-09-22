@@ -168,15 +168,16 @@ public class RSController {
                               ServerHttpRequest request, ServerHttpResponse response) {
 
         return resourceStorage.downloadFile(path)
+                // TODO: 2021/9/22
                 .publishOn(Schedulers.elastic())    // why????
                 .flatMap(pair -> {
                     ResourceInfo resourceInfo = pair.getKey();
                     String localFilePath = String.valueOf(pair.getValue());
 
-                    if (!filePreviewHandlerComposite.supports(resourceInfo)) {
-                        return Mono.error(new RuntimeException("当前文件类型暂不支持预览！"));
+                    if (filePreviewHandlerComposite.supports(resourceInfo)) {
+                        return filePreviewHandlerComposite.handle(request, response, resourceInfo, localFilePath, platform, mode);
                     }
-                    return filePreviewHandlerComposite.handle(request, response, resourceInfo, localFilePath, platform, mode);
+                    return Mono.error(new RuntimeException("当前文件类型暂不支持预览！"));
                 });
     }
 
@@ -190,10 +191,10 @@ public class RSController {
         return resourceStorage.getResourceInfoByPath(path)
                 .publishOn(Schedulers.elastic())    // why????
                 .flatMap(resourceInfo -> {
-                    if (!filePreviewHandlerComposite.supports(resourceInfo)) {
-                        return Mono.error(new RuntimeException("当前文件类型暂不支持预览！"));
+                    if (filePreviewHandlerComposite.supports(resourceInfo)) {
+                        return filePreviewHandlerComposite.getDocModel(request, resourceInfo, platform, mode);
                     }
-                    return filePreviewHandlerComposite.getDocModel(request, resourceInfo, platform, mode);
+                    return Mono.error(new RuntimeException("当前文件类型暂不支持预览！"));
                 });
     }
 
