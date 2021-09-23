@@ -11,6 +11,7 @@ import cn.x5456.rs.server.controller.preview.onlyoffice.dto.UserDTO;
 import cn.x5456.rs.server.controller.preview.onlyoffice.enums.ModeEnum;
 import cn.x5456.rs.server.controller.preview.onlyoffice.enums.OfficeTypeEnum;
 import cn.x5456.rs.server.controller.preview.onlyoffice.enums.PlatformEnum;
+import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -28,6 +29,7 @@ import java.util.List;
  * @author yujx
  * @date 2021/09/17 15:29
  */
+@Slf4j
 @Component
 public class OnlyOfficeHandler implements FilePreviewHandler {
 
@@ -75,6 +77,7 @@ public class OnlyOfficeHandler implements FilePreviewHandler {
 
     @Nullable
     private String getFileType(ResourceInfo resourceInfo) {
+        log.info("resourceInfo：「{}」", resourceInfo);
         return resourceStorage.getAttachment(resourceInfo.getId(), AttachmentConstant.FILE_TYPE, String.class).block();
     }
 
