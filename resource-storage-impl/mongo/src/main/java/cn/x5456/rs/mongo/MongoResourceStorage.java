@@ -586,6 +586,7 @@ public class MongoResourceStorage implements IResourceStorage {
 
     @NotNull
     private Flux<DataBuffer> doDownloadChunk(FsFileMetadata.FsFilesInfo fsFilesInfo, RandomAccessFile randomAccessFile) {
+        log.info("fsFilesInfo：「{}」", fsFilesInfo);
         return gridFsTemplate.findOne(Query.query(Criteria.where("_id").is(fsFilesInfo.getFilesId())))
                 .flatMap(gridFsTemplate::getResource)
                 .map(ReactiveGridFsResource::getDownloadStream)

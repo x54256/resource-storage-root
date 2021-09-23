@@ -170,6 +170,10 @@ public class RSController {
         return resourceStorage.downloadFile(path)
                 // TODO: 2021/9/22
                 .publishOn(Schedulers.elastic())    // why????
+                /*
+                1. 因为 resourceStorage.downloadFile(path) 方法中还有一个 if 条件没有将其切换为普通线程
+                2. 但为何在 nio 线程中获取就会出现这个问题呢？？？？
+                 */
                 .flatMap(pair -> {
                     ResourceInfo resourceInfo = pair.getKey();
                     String localFilePath = String.valueOf(pair.getValue());
