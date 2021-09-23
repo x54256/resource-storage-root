@@ -13,6 +13,7 @@ import cn.x5456.rs.server.controller.preview.onlyoffice.enums.OfficeTypeEnum;
 import cn.x5456.rs.server.controller.preview.onlyoffice.enums.PlatformEnum;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.stereotype.Component;
@@ -80,15 +81,18 @@ public class OnlyOfficeHandler implements FilePreviewHandler {
     @Override
     public Mono<Void> handle(ServerHttpRequest request, ServerHttpResponse response, ResourceInfo resourceInfo, String localFilePath, String platform, String mode) {
         Assert.isTrue(this.supports(resourceInfo), "未找到与当前文件类型匹配的处理器，无法预览！");
-
-        // 拼接预览 url
-        String url = StrUtil.format("/office.html?id={}&platform={}&mode={}", resourceInfo.getId(), platform, mode);
-        response.getHeaders().setLocation(URI.create(url));
-        return Mono.empty();
+        return Mono.fromRunnable(() -> {
+            response.setStatusCode(HttpStatus.FOUND);
+            // 拼接预览 url
+            String url = StrUtil.format("/office.html?id={}&platform={}&mode={}", resourceInfo.getId(), platform, mode);
+            response.getHeaders().setLocation(URI.create(url));
+        });
     }
 
     /**
      * 获取文档模型
+     *
+     * 注：需要使用本地 ip 来调用，不能使用 127.0.0.1，否则 docker 容器中的 onlyOffice 无法下载文件
      */
     public Mono<Object> getDocModel(ServerHttpRequest request, ResourceInfo resourceInfo, String platform, String mode) {
         Assert.isTrue(this.supports(resourceInfo), "未找到与当前文件类型匹配的处理器，无法预览！");

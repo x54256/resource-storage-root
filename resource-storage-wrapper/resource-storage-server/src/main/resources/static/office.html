@@ -2,9 +2,9 @@
 <html lang="zh">
 <head>
     <meta charset="UTF-8">
-    <title>XDATA DOC</title>
+    <title>RS DOC</title>
     <script src="js/base.js?V20201127"></script>
-    <script src="http://127.0.0.1:9000/web-apps/apps/api/documents/api.js"></script>
+    <script src="http://127.0.0.1:9000/web-apps/apps/api/documents/api.js?"></script>
     <style>
         html, body {
             height: 100%;
@@ -22,89 +22,7 @@
 <script>
     Doc.load(function (doc) {
         document.title = doc.document.title;
-        // doc = {
-        //     "type": "desktop",
-        //     "documentType": "text",
-        //     "document": {
-        //         "key": "614ad95dcdb2d6e2deb8e8ba",
-        //         "fileType": "docx",
-        //         "title": "sprinboot升级问题以及解决方案.docx",
-        //         "url": "http://192.168.1.108:8080/rest/rs/v2/files/614ad95dcdb2d6e2deb8e8ba",
-        //         "permissions": {
-        //             "edit": false,
-        //             "comment": false,
-        //             "print": false,
-        //             "download": false,
-        //             "review": false,
-        //             "copy": false,
-        //             "fillForms": false,
-        //             "modifyFilter": false,
-        //             "modifyContentControl": false
-        //         }
-        //     },
-        //     "editorConfig": {
-        //         "mode": "view",
-        //         "callbackUrl": null,
-        //         "lang": "zh",
-        //         "region": "zh-CN",
-        //         // "customization": {
-        //         //     "about": false,
-        //         //     "help": false,
-        //         //     "plugins": false,
-        //         //     "spellcheck": false,
-        //         //     "hideRightMenu": true,
-        //         //     "feedback": {"visible": false},
-        //         //     "chat": false,
-        //         //     "commentAuthorOnly": false,
-        //         //     "comments": false,
-        //         //     "toolbarNoTabs": true,
-        //         //     "compactHeader": true,
-        //         //     "compactToolbar": true
-        //         // },
-        //         "user": {"id": "dist", "name": "上海数慧"}
-        //     }
-        // }
         new DocsAPI.DocEditor("placeholder", doc)
-        // new DocsAPI.DocEditor("placeholder",
-        //     {
-        //         "type": "desktop",
-        //         "documentType": "spreadsheet",
-        //         "document": {
-        //             "key": "613ffd06f8c54b57fb103ead",
-        //             "fileType": "xlsx",
-        //             "title": "7fec1d8d1a1dfcd2f980f9f6dca84917.xlsx",
-        //             "url": "http://52.82.78.179:30088/main/doc/download/613ffd06bce3b29b83b3edb9",
-        //             "permissions": {
-        //                 "edit": false,
-        //                 "comment": false,
-        //                 "print": false,
-        //                 "download": false,
-        //                 "review": false,
-        //                 "copy": false
-        //             }
-        //         },
-        //         "editorConfig": {
-        //             "mode": "view",
-        //             "callbackUrl": null,
-        //             "lang": "zh",
-        //             "region": "zh-CN",
-        //             "customization": {
-        //                 "about": false,
-        //                 "help": false,
-        //                 "plugins": false,
-        //                 "spellcheck": false,
-        //                 "hideRightMenu": true,
-        //                 "feedback": {"visible": false},
-        //                 "chat": false,
-        //                 "commentAuthorOnly": false,
-        //                 "comments": false,
-        //                 "toolbarNoTabs": true,
-        //                 "compactHeader": true,
-        //                 "compactToolbar": true
-        //             },
-        //             "user": {"id": "dist", "name": "上海数慧"}
-        //         }
-        //     });
     });
 </script>
 </body>
