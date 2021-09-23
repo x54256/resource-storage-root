@@ -40,7 +40,7 @@ public class RSController {
     private IResourceStorage resourceStorage;
 
     @Autowired
-    private FilePreviewHandlerComposite filePreviewHandlerComposite;
+    private FilePreviewHandlerComposite previewHandlerComposite;
 
     @ApiOperation("上传小文件")
     @PostMapping(value = "/v1/files", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -171,15 +171,28 @@ public class RSController {
                 // TODO: 2021/9/22
                 .publishOn(Schedulers.elastic())    // why????
                 /*
-                1. 因为 resourceStorage.downloadFile(path) 方法中还有一个 if 条件没有将其切换为普通线程
+                1. 因为 resourceStorage.downloadFile(path) 方法中还有一个 if 条件没有将其切换为普通线程，还是 nio 线程
                 2. 但为何在 nio 线程中获取就会出现这个问题呢？？？？
+                    因为 resourceStorage.getAttachment().block() 方法会阻塞 nio 线程
+                    而 resourceStorage.getAttachment() 方法中调用了 mongoTemplate.findOne() 方法，该方法也被分配到了相同的 nio 线程（机制），
+                    然后这个任务被放入队列中，然后代码继续往下执行，然后 block 方法把 nio 线程阻塞住了。
+
+                    该代码类比为：
+                    ExecutorService executor = Executors.newSingleThreadExecutor();
+                    executor.submit(() -> {
+                        log.info("xxx");
+                        Future<?> yyy = executor.submit(() -> {
+                            log.info("yyy");
+                        });
+                        yyy.get();
+                    });
                  */
                 .flatMap(pair -> {
                     ResourceInfo resourceInfo = pair.getKey();
                     String localFilePath = String.valueOf(pair.getValue());
 
-                    if (filePreviewHandlerComposite.supports(resourceInfo)) {
-                        return filePreviewHandlerComposite.handle(request, response, resourceInfo, localFilePath, platform, mode);
+                    if (previewHandlerComposite.supports(resourceInfo)) {
+                        return previewHandlerComposite.handle(request, response, resourceInfo, localFilePath, platform, mode);
                     }
                     return Mono.error(new RuntimeException("当前文件类型暂不支持预览！"));
                 });
@@ -195,8 +208,8 @@ public class RSController {
         return resourceStorage.getResourceInfoByPath(path)
                 .publishOn(Schedulers.elastic())    // why????
                 .flatMap(resourceInfo -> {
-                    if (filePreviewHandlerComposite.supports(resourceInfo)) {
-                        return filePreviewHandlerComposite.getDocModel(request, resourceInfo, platform, mode);
+                    if (previewHandlerComposite.supports(resourceInfo)) {
+                        return previewHandlerComposite.getDocModel(request, resourceInfo, platform, mode);
                     }
                     return Mono.error(new RuntimeException("当前文件类型暂不支持预览！"));
                 });
