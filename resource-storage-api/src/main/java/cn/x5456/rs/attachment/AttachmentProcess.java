@@ -10,5 +10,5 @@ import cn.x5456.rs.entity.FileMetadata;
  */
 public interface AttachmentProcess<T> {
 
-    T process(FileMetadata metadata);
+    T process(FileMetadata metadata, String ... args);
 }

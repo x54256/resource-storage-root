@@ -14,6 +14,7 @@ import cn.hutool.crypto.digest.DigestAlgorithm;
 import cn.x5456.infrastructure.util.FileChannelUtil;
 import cn.x5456.infrastructure.util.FileMimeTypeUtil;
 import cn.x5456.rs.attachment.AttachmentProcessContainer;
+import cn.x5456.rs.constant.AttachmentConstant;
 import cn.x5456.rs.def.BigFileUploader;
 import cn.x5456.rs.def.IResourceStorage;
 import cn.x5456.rs.def.UploadProgress;
@@ -305,14 +306,18 @@ public class MongoResourceStorage implements IResourceStorage {
 
     @NotNull
     private Mono<FsResourceInfo> insertResource(FsFileMetadata metadata, String fileName, String path) {
-        FsResourceInfo fsResourceInfo = new FsResourceInfo();
-        fsResourceInfo.setId(path);
-        fsResourceInfo.setFileName(fileName);
-        fsResourceInfo.setFileHash(metadata.getFileHash());
-        fsResourceInfo.setMetadataId(metadata.getId());
-        fsResourceInfo.setMimeType(FileMimeTypeUtil.getMimeType(fileName));
+        return this.getAttachmentByHash(metadata.getFileHash(), AttachmentConstant.FILE_TYPE, fileName)
+                .flatMap(fileType -> {
+                    FsResourceInfo fsResourceInfo = new FsResourceInfo();
+                    fsResourceInfo.setId(path);
+                    fsResourceInfo.setFileName(fileName);
+                    fsResourceInfo.setFileHash(metadata.getFileHash());
+                    fsResourceInfo.setMetadataId(metadata.getId());
+                    fsResourceInfo.setMimeType(FileMimeTypeUtil.getMimeType(fileName));
+                    fsResourceInfo.setFileType((String) fileType);
 
-        return mongoTemplate.insert(fsResourceInfo);
+                    return mongoTemplate.insert(fsResourceInfo);
+                });
     }
 
     @NotNull
@@ -710,12 +715,12 @@ public class MongoResourceStorage implements IResourceStorage {
      * 1. 第一次添加 metadata 的时候新开一个线程进行处理获取结果
      * 2. 第一次调用的时候，检查是否已经存在，如果不存在则处理获取结果再保存
      *
-     * @param path   服务上存储的标识
-     * @param key    附件信息key
+     * @param path 服务上存储的标识
+     * @param key  附件信息key
      * @return 附件信息
      */
     @Override
-    public <T> Mono<T> getAttachment(String path, String key) {
+    public <T> Mono<T> getAttachment(String path, String key, String ... args) {
         /*
         1. 先查询元数据表，查看是否已经解析过了
         2. 如果没解析就从 container 获取 process 调用获取结果（把结果强转为 T 类型）
@@ -736,7 +741,7 @@ public class MongoResourceStorage implements IResourceStorage {
      * @return 附件信息
      */
     @Override
-    public <T> Mono<T> getAttachmentByHash(String fileHash, String key) {
+    public <T> Mono<T> getAttachmentByHash(String fileHash, String key, String ... args) {
         return this.getReadyMetadata(fileHash)
                 .switchIfEmpty(Mono.error(new RuntimeException("传入的文件 hash 还未上传！")))
                 .publishOn(scheduler)   // 下面的操作 AttachmentProcessContainer#getProcess 是阻塞的，所以要切换到普通线程
@@ -751,7 +756,7 @@ public class MongoResourceStorage implements IResourceStorage {
                     if (AttachmentProcessContainer.getProcess(key) == null) {
                         return Mono.error(new RuntimeException("未找到传入 key 的处理器，请添加！"));
                     }
-                    Object fileNode = AttachmentProcessContainer.getProcess(key).process(fsFileMetadata);
+                    Object fileNode = AttachmentProcessContainer.getProcess(key).process(fsFileMetadata, args);
                     if (fileNode != null) {
                         return Mono.just((T) fileNode);
                     }

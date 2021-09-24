@@ -3,6 +3,7 @@ package cn.x5456.rs.mongo.attachment;
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.io.IORuntimeException;
+import cn.hutool.core.util.ArrayUtil;
 import cn.hutool.core.util.IdUtil;
 import cn.x5456.infrastructure.util.CompressUtils;
 import cn.x5456.infrastructure.util.FileNodeDTO;
@@ -13,15 +14,12 @@ import cn.x5456.rs.attachment.AttachmentProcessContainer;
 import cn.x5456.rs.constant.AttachmentConstant;
 import cn.x5456.rs.def.IResourceStorage;
 import cn.x5456.rs.entity.FileMetadata;
-import cn.x5456.rs.mongo.document.FsResourceInfo;
 import cn.x5456.rs.mongo.dto.ZipFileNode;
 import com.google.common.collect.ImmutableList;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.compress.archivers.ArchiveStreamFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.data.mongodb.core.ReactiveMongoTemplate;
-import org.springframework.data.mongodb.core.query.Criteria;
-import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Scheduler;
@@ -55,49 +53,46 @@ public class FileNodeAttachmentProcess implements AttachmentProcess<ZipFileNode>
         AttachmentProcessContainer.addProcess(AttachmentConstant.FILE_NODE, this);
     }
 
+    // TODO: 2021/9/24 压缩包下还有压缩包是否还进行上传，对深度进行控制
     @Override
-    public ZipFileNode process(FileMetadata metadata) {
+    public ZipFileNode process(FileMetadata metadata, String... args) {
         Mono<ZipFileNode> zipFileNodeMono = Mono.create(sink -> mongoResourceStorage.downloadFileByFileHash(metadata.getFileHash())
+                .publishOn(scheduler)
                 .subscribe(localFilePath -> {
+                    String fileName = null;
+                    if (ArrayUtil.isNotEmpty(args)) {
+                        fileName = args[0];
+                    }
+
                     // 猜测文件类型
-                    Query query = new Query(Criteria.where(FsResourceInfo.METADATA_ID).is(metadata.getFileHash()));
-                    mongoTemplate.findOne(query, FsResourceInfo.class)
-                            .publishOn(scheduler)   // 切换到普通线程，不能阻塞 nio 线程（指的不是下面的 block()）
-                            .subscribe(resourceInfo -> {
-                                try {
-                                    // 推测文件的类型，并保存
-                                    String fileType = FileTypeGuessUtil.getTypeByPath(localFilePath, resourceInfo.getFileName());
-                                    metadata.getAttachments().put(AttachmentConstant.FILE_TYPE, fileType);
-                                    mongoTemplate.save(metadata).subscribe();
+                    String fileType = FileTypeGuessUtil.getTypeByPath(localFilePath, fileName);
+                    metadata.getAttachments().put(AttachmentConstant.FILE_TYPE, fileType);
+                    mongoTemplate.save(metadata).subscribe();
 
-                                    // 如果文件是压缩包，则解析其中文件结构
-                                    if (!COMPRESS_PACKAGE_TYPE_LIST.contains(fileType)) {
-                                        sink.error(new RuntimeException("该文件不是压缩包，无法解析！"));
-                                        return;
-                                    }
-
-                                    // 解压并解析
-                                    String extractPath = CompressUtils.extract(localFilePath);
-                                    FileNodeDTO fileNode = FileNodeUtil.getFileNode(extractPath, node -> {
-                                        String path = IdUtil.objectId();
-                                        // TODO: 2021/5/14 暂时阻塞上传，否则会被下面删除
-                                        mongoResourceStorage.uploadFile(node.getPath().toString(), path).block();
-                                        node.addAttachment(ZipFileNode.PATH, path);
-                                    });
-
-                                    // 将 fileNode 映射为 zipFileNode
-                                    ZipFileNode zipFileNode = this.convert(fileNode);
-                                    metadata.getAttachments().put(AttachmentConstant.FILE_NODE, zipFileNode);
-                                    mongoTemplate.save(metadata).subscribe(x -> log.info("压缩包文件解析成功！"));
-
-                                    // 删除解压出来的压缩包
-                                    FileUtil.del(extractPath);
-
-                                    sink.success(zipFileNode);
-                                } catch (IORuntimeException e) {
-                                    sink.error(e);
-                                }
-                            });
+                    try {
+                        // 如果文件是压缩包，则解析其中文件结构
+                        if (!COMPRESS_PACKAGE_TYPE_LIST.contains(fileType)) {
+                            sink.error(new RuntimeException("该文件不是压缩包，无法解析！"));
+                            return;
+                        }
+                        // 解压并解析
+                        String extractPath = CompressUtils.extract(localFilePath);
+                        FileNodeDTO fileNode = FileNodeUtil.getFileNode(extractPath, node -> {
+                            String path = IdUtil.objectId();
+                            // TODO: 2021/5/14 暂时阻塞上传，否则会被下面删除
+                            mongoResourceStorage.uploadFile(node.getPath().toString(), path).block();
+                            node.addAttachment(ZipFileNode.PATH, path);
+                        });
+                        // 将 fileNode 映射为 zipFileNode
+                        ZipFileNode zipFileNode = this.convert(fileNode);
+                        metadata.getAttachments().put(AttachmentConstant.FILE_NODE, zipFileNode);
+                        mongoTemplate.save(metadata).subscribe(x -> log.info("压缩包文件解析成功！"));
+                        // 删除解压出来的压缩包
+                        FileUtil.del(extractPath);
+                        sink.success(zipFileNode);
+                    } catch (IORuntimeException e) {
+                        sink.error(e);
+                    }
                 }));
 
         return zipFileNodeMono.block();

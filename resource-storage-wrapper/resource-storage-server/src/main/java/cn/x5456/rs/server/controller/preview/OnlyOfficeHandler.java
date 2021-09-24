@@ -3,7 +3,6 @@ package cn.x5456.rs.server.controller.preview;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.x5456.infrastructure.enums.EnumInterface;
-import cn.x5456.rs.constant.AttachmentConstant;
 import cn.x5456.rs.def.IResourceStorage;
 import cn.x5456.rs.entity.ResourceInfo;
 import cn.x5456.rs.server.controller.preview.onlyoffice.FileModelDTO;
@@ -12,7 +11,6 @@ import cn.x5456.rs.server.controller.preview.onlyoffice.enums.ModeEnum;
 import cn.x5456.rs.server.controller.preview.onlyoffice.enums.OfficeTypeEnum;
 import cn.x5456.rs.server.controller.preview.onlyoffice.enums.PlatformEnum;
 import lombok.extern.slf4j.Slf4j;
-import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpRequest;
@@ -71,15 +69,8 @@ public class OnlyOfficeHandler implements FilePreviewHandler {
 
     @Override
     public boolean supports(ResourceInfo resourceInfo) {
-        String fileType = getFileType(resourceInfo);
+        String fileType = resourceInfo.getFileType();
         return StrUtil.isNotBlank(fileType) && ALL.contains(fileType);
-    }
-
-    @Nullable
-    private String getFileType(ResourceInfo resourceInfo) {
-        log.info("resourceInfo：「{}」", resourceInfo);
-        Mono<String> fileType = resourceStorage.getAttachment(resourceInfo.getId(), AttachmentConstant.FILE_TYPE);
-        return fileType.block();
     }
 
     @Override
@@ -95,7 +86,7 @@ public class OnlyOfficeHandler implements FilePreviewHandler {
 
     /**
      * 获取文档模型
-     *
+     * <p>
      * 注：需要使用本地 ip 来调用，不能使用 127.0.0.1，否则 docker 容器中的 onlyOffice 无法下载文件
      */
     public Mono<Object> getDocModel(ServerHttpRequest request, ResourceInfo resourceInfo, String platform, String mode) {
@@ -117,7 +108,7 @@ public class OnlyOfficeHandler implements FilePreviewHandler {
 
     private OfficeTypeEnum getOfficeType(ResourceInfo resourceInfo) {
         OfficeTypeEnum officeTypeEnum = null;
-        String fileType = this.getFileType(resourceInfo);
+        String fileType = resourceInfo.getFileType();
         if (EXT_DOCUMENT.contains(fileType)) {
             officeTypeEnum = OfficeTypeEnum.TEXT;
         } else if (EXT_SPREADSHEET.contains(fileType)) {

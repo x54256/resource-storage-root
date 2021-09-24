@@ -2,7 +2,11 @@ package cn.x5456.infrastructure.util;
 
 import cn.hutool.core.io.FileTypeUtil;
 import cn.hutool.core.io.FileUtil;
+import cn.hutool.core.io.IoUtil;
 import org.jetbrains.annotations.Nullable;
+
+import java.io.File;
+import java.io.FileInputStream;
 
 /**
  * @author yujx
@@ -19,9 +23,13 @@ public final class FileTypeGuessUtil {
 
     @Nullable
     public static String getTypeByPath(String localTempPath, String fileName) {
-        String typeName = FileTypeUtil.getTypeByPath(localTempPath);
-        if (fileName == null) {
-            return typeName;
+        String typeName;
+        FileInputStream in = null;
+        try {
+            in = IoUtil.toStream(new File(localTempPath));
+            typeName = FileTypeUtil.getType(in);
+        } finally {
+            IoUtil.close(in);
         }
 
         if (null == typeName) {
