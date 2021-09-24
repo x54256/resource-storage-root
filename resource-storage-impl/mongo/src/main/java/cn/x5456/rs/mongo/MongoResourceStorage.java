@@ -712,11 +712,10 @@ public class MongoResourceStorage implements IResourceStorage {
      *
      * @param path   服务上存储的标识
      * @param key    附件信息key
-     * @param tClass 需要转换的类型
      * @return 附件信息
      */
     @Override
-    public <T> Mono<T> getAttachment(String path, String key, Class<T> tClass) {
+    public <T> Mono<T> getAttachment(String path, String key) {
         /*
         1. 先查询元数据表，查看是否已经解析过了
         2. 如果没解析就从 container 获取 process 调用获取结果（把结果强转为 T 类型）
@@ -726,7 +725,7 @@ public class MongoResourceStorage implements IResourceStorage {
         // 获取文件信息
         return this.getResourceInfo(path)
                 .switchIfEmpty(Mono.error(new RuntimeException(StrUtil.format("输入的 path：「{}」不正确！", path))))
-                .flatMap(fsResourceInfo -> this.getAttachmentByHash(fsResourceInfo.getFileHash(), key, tClass));
+                .flatMap(fsResourceInfo -> this.getAttachmentByHash(fsResourceInfo.getFileHash(), key));
     }
 
     /**
@@ -734,11 +733,10 @@ public class MongoResourceStorage implements IResourceStorage {
      *
      * @param fileHash 文件 hash
      * @param key      附件信息key
-     * @param tClass   需要转换的类型
      * @return 附件信息
      */
     @Override
-    public <T> Mono<T> getAttachmentByHash(String fileHash, String key, Class<T> tClass) {
+    public <T> Mono<T> getAttachmentByHash(String fileHash, String key) {
         return this.getReadyMetadata(fileHash)
                 .switchIfEmpty(Mono.error(new RuntimeException("传入的文件 hash 还未上传！")))
                 .publishOn(scheduler)   // 下面的操作 AttachmentProcessContainer#getProcess 是阻塞的，所以要切换到普通线程

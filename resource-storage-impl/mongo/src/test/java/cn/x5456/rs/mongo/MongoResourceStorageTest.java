@@ -260,13 +260,13 @@ public class MongoResourceStorageTest {
 
     @Test
     public void getAttachment() {
-        Mono<String> mono = mongoResourceStorage.getAttachment("61455022ee927bcf691f3095", AttachmentConstant.FILE_TYPE, String.class);
+        Mono<String> mono = mongoResourceStorage.getAttachment("61455022ee927bcf691f3095", AttachmentConstant.FILE_TYPE);
         System.out.println(mono.block());
     }
 
     @Test
     public void getAttachmentByHash() {
-        Mono<String> mono = mongoResourceStorage.getAttachmentByHash("bc59a80693c5882445e34949ac0ba62f39e7b1f8fbdc74e6130ec304dfd3ba95", AttachmentConstant.FILE_TYPE, String.class);
+        Mono<String> mono = mongoResourceStorage.getAttachmentByHash("bc59a80693c5882445e34949ac0ba62f39e7b1f8fbdc74e6130ec304dfd3ba95", AttachmentConstant.FILE_TYPE);
         System.out.println(mono.block());
     }
 

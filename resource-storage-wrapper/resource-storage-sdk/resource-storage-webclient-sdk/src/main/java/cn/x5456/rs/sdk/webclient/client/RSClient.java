@@ -193,5 +193,10 @@ public class RSClient {
          * 文件的 Mime Type
          */
         private String mimeType;
+
+        /**
+         * 文件类型（后缀）
+         */
+        private String fileType;
     }
 }

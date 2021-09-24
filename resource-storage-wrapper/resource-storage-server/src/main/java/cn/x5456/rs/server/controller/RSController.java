@@ -269,7 +269,7 @@ public class RSController {
     @GetMapping("/v1/files/attachment/{path}/{key}")
     public Mono<Object> getAttachment(@PathVariable @ApiParam(value = "文件存储标识") String path,
                                       @PathVariable @ApiParam(value = "附件类型") String key) {
-        return resourceStorage.getAttachment(path, key, Object.class);
+        return resourceStorage.getAttachment(path, key);
     }
 
     @ApiOperation("根据path查询hash值")

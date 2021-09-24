@@ -4,7 +4,6 @@ import cn.x5456.infrastructure.util.FileTypeGuessUtil;
 import cn.x5456.rs.constant.AttachmentConstant;
 import cn.x5456.rs.def.IResourceStorage;
 import cn.x5456.rs.mongo.document.FsFileMetadata;
-import cn.x5456.rs.mongo.dto.ZipFileNode;
 import cn.x5456.rs.mongo.listener.event.AfterMetadataSaveEvent;
 import com.google.common.collect.ImmutableList;
 import lombok.extern.slf4j.Slf4j;
@@ -51,8 +50,7 @@ public class AfterMetadataSaveEventListener implements ApplicationListener<After
                 .subscribe(localFilePath -> {
                     String fileType = FileTypeGuessUtil.getTypeByPath(localFilePath, fileName);
                     if (COMPRESS_PACKAGE_TYPE_LIST.contains(fileType)) {
-                        mongoResourceStorage.getAttachmentByHash(metadata.getFileHash(),
-                                AttachmentConstant.FILE_NODE, ZipFileNode.class).subscribe();
+                        mongoResourceStorage.getAttachmentByHash(metadata.getFileHash(), AttachmentConstant.FILE_NODE).subscribe();
                     }
                 });
     }

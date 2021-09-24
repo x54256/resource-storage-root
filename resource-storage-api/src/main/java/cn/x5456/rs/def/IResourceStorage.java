@@ -132,19 +132,17 @@ public interface IResourceStorage {
      *
      * @param path   服务上存储的标识
      * @param key    附件信息key
-     * @param tClass 需要转换的类型
      * @return 附件信息
      */
-    <T> Mono<T> getAttachment(String path, String key, Class<T> tClass);
+    <T> Mono<T> getAttachment(String path, String key);
 
     /**
      * 获取附件信息
      *
      * @param key 附件信息key
      * @param <T> 需要转换的类型
-     * @return 附件信息
      */
-    <T> Mono<T> getAttachmentByHash(String fileHash, String key, Class<T> tClass);
+    <T> Mono<T> getAttachmentByHash(String fileHash, String key);
 
     // ============================== 辅助开发使用的接口，慎用
 

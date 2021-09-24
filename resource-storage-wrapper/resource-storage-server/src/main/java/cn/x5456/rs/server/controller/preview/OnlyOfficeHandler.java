@@ -78,7 +78,8 @@ public class OnlyOfficeHandler implements FilePreviewHandler {
     @Nullable
     private String getFileType(ResourceInfo resourceInfo) {
         log.info("resourceInfo：「{}」", resourceInfo);
-        return resourceStorage.getAttachment(resourceInfo.getId(), AttachmentConstant.FILE_TYPE, String.class).block();
+        Mono<String> fileType = resourceStorage.getAttachment(resourceInfo.getId(), AttachmentConstant.FILE_TYPE);
+        return fileType.block();
     }
 
     @Override
