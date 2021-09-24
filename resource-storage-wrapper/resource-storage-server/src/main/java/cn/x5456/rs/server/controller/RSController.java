@@ -168,8 +168,8 @@ public class RSController {
                               ServerHttpRequest request, ServerHttpResponse response) {
 
         return resourceStorage.downloadFile(path)
-                // TODO: 2021/9/22
-                .publishOn(Schedulers.elastic())    // why????
+                // 由于后续操作有阻塞行为，故将其切换至普通线程
+                .publishOn(Schedulers.elastic())
                 /*
                 1. 因为 resourceStorage.downloadFile(path) 方法中还有一个 if 条件没有将其切换为普通线程，还是 nio 线程
                 2. 但为何在 nio 线程中获取就会出现这个问题呢？？？？
@@ -206,7 +206,8 @@ public class RSController {
                                      ServerHttpRequest request) {
 
         return resourceStorage.getResourceInfoByPath(path)
-                .publishOn(Schedulers.elastic())    // why????
+                // 由于后续操作有阻塞行为，故将其切换至普通线程
+                .publishOn(Schedulers.elastic())
                 .flatMap(resourceInfo -> {
                     if (previewHandlerComposite.supports(resourceInfo)) {
                         return previewHandlerComposite.getDocModel(request, resourceInfo, platform, mode);
