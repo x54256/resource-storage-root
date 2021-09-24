@@ -39,4 +39,9 @@ public interface ResourceInfo {
      * 获取文件的 Mime Type
      */
     String getMimeType();
+
+    /**
+     * 获取文件类型
+     */
+    String getFileType();
 }
